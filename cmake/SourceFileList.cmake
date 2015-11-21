@@ -276,6 +276,7 @@ set(eoserv_WIN32_SOURCE_FILES
 set(ConfigFiles
 	admin.ini
 	config.ini
+	config.local.ini # MainClone
 	
 	config/boards.ini
 	config/console.ini
