@@ -35,6 +35,11 @@ void EvacuateMap(const std::vector<std::string>& arguments, Character* from)
 {
 	(void)arguments;
 
+	// Prevent evacuation of the jail map
+	// But this shouldn't crash anymore anyway...
+	if (from->map->id == 76)
+		return;
+
 	from->map->Evacuate();
 }
 

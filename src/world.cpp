@@ -240,7 +240,16 @@ void world_timed_save(void *world_void)
 
 	world->guildmanager->SaveAll();
 
-	world->CommitDB();
+	try
+	{
+		world->CommitDB();
+	}
+	catch (Database_Exception& e)
+	{
+		Console::Wrn("Database commit failed - no data was saved!");
+		world->db.Rollback();
+	}
+
 	world->BeginDB();
 }
 
@@ -320,9 +329,19 @@ void World::UpdateConfig()
 		this->instrument_ids.push_back(int(util::tdparse(instrument_list[i])));
 	}
 
-
 	if (this->db.Pending() && !this->config["TimedSave"])
-		this->CommitDB();
+	{
+		try
+		{
+			this->CommitDB();
+		}
+		catch (Database_Exception& e)
+		{
+			Console::Wrn("Database commit failed - no data was saved!");
+			this->db.Rollback();
+			this->BeginDB();
+		}
+	}
 }
 
 World::World(std::array<std::string, 6> dbinfo, const Config &eoserv_config, const Config &admin_config)
@@ -366,6 +385,19 @@ World::World(std::array<std::string, 6> dbinfo, const Config &eoserv_config, con
 
 	Console::Out("Connecting to database (%s)...", dbdesc.c_str());
 	this->db.Connect(engine, dbinfo[1], util::to_int(dbinfo[5]), dbinfo[2], dbinfo[3], dbinfo[4]);
+
+	if (config.find("StartUpSQL") != config.end())
+	{
+		try
+		{
+			this->db.ExecuteFile(config["StartupSQL"]);
+		}
+		catch (Database_Exception& e)
+		{
+			Console::Err(e.error());
+		}
+	}
+
 	this->BeginDB();
 
 	try

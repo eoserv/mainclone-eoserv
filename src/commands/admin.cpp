@@ -44,7 +44,7 @@ void Duty(const std::vector<std::string>& arguments, Character* from)
 	for (Character* c : from->player->characters)
 	{
 		if ((dutyoff && c->real_name == player->dutylast)
-		 || (!dutyoff && c != from && c->admin))
+		 || (!dutyoff && c != from && c->admin && c->real_name == "gm"+from->real_name))
 		{
 			if (player->dutylast.empty())
 				player->dutylast = from->real_name;

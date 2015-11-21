@@ -196,6 +196,8 @@ class Character : public Command_Source
 		int muted_until;
 		bool bot;
 
+		bool can_set_title = false;
+
 		std::string faux_name;
 
 		Arena *next_arena;

@@ -120,7 +120,20 @@ void Talk_Report(Character *character, PacketReader &reader)
 		return;
 	}
 
-	if (character->SourceAccess() && message[0] == '$')
+	if (character->can_set_title && message.substr(0, 7) == "#title ")
+ 	{
+		if (message.length() > 27)
+		{
+			character->ServerMsg("Title too long, please try again. (max. 20 chars)");
+		}
+		else
+		{
+			character->title = message.substr(7, 20);
+			character->ServerMsg("Your title has been set to: " + character->title);
+			character->can_set_title = false;
+		}
+	}
+	else if (character->SourceAccess() && message[0] == '$')
 	{
 		if (character->world->config["LogCommands"])
 		{

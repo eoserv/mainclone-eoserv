@@ -496,6 +496,12 @@ Character::Character(std::string name, World *world)
 	{
 		this->nointeract = static_cast<int>(world->config["NoInteractDefault"]);
 	}
+
+	// Hide "Gm" prefix on duty character names :)
+	if (this->admin && this->real_name.substr(0, 2) == "gm")
+	{
+		this->faux_name = this->real_name.substr(2);
+	}
 }
 
 int Character::PlayerID() const
