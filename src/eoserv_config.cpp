@@ -328,6 +328,7 @@ void eoserv_config_validate_admin(Config& config)
 	eoserv_config_default(config, "setclass"      , 3);
 	eoserv_config_default(config, "settitle"      , 2);
 	eoserv_config_default(config, "strip"         , 3);
+	eoserv_config_default(config, "wed"           , 2);
 	eoserv_config_default(config, "dress"         , 2);
 	eoserv_config_default(config, "undress"       , 2);
 	eoserv_config_default(config, "dress2"        , 3);

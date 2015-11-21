@@ -353,6 +353,87 @@ void Undress(const std::vector<std::string>& arguments, Command_Source* from)
 	}
 }
 
+void Marry(const std::vector<std::string>& arguments, Character* from)
+{
+	Character* victim1 = from->SourceWorld()->GetCharacter(arguments[0]);
+	Character* victim2 = from->SourceWorld()->GetCharacter(arguments[1]);
+
+	if (!victim1 || !victim2)
+	{
+		from->ServerMsg("Both partners must be online.");
+		return;
+	}
+
+	if (victim1 == victim2)
+	{
+		from->ServerMsg("Sologamy is not allowed.");
+		return;
+	}
+
+	if (!victim1->partner.empty() || !victim2->partner.empty())
+	{
+		from->ServerMsg("Both partners must be unmarried.");
+		return;
+	}
+
+	if (!victim1->InRange(victim2))
+	{
+		from->ServerMsg("Both partners must be together.");
+		return;
+	}
+
+	if (!from->InRange(from) || !from->InRange(victim2))
+	{
+		from->ServerMsg("Both partners must be with you.");
+		return;
+	}
+
+	if ((victim1->gender && victim1->paperdoll[Character::Armor] != 133)
+	 || (!victim1->gender && victim1->paperdoll[Character::Armor] != 163))
+	{
+		from->ServerMsg(victim1->SourceName() + " is not in their formal attire.");
+		return;
+	}
+
+	if ((victim2->gender && victim2->paperdoll[Character::Armor] != 133)
+	 || (!victim2->gender && victim2->paperdoll[Character::Armor] != 163))
+	{
+		from->ServerMsg(victim2->SourceName() + " is not in their formal attire.");
+		return;
+	}
+
+	victim1->partner = victim2->SourceName();
+	victim2->partner = victim1->SourceName();
+
+	victim1->Effect(1);
+	victim2->Effect(1);
+
+	short id = 374;
+	int amount = 1;
+
+	if (victim1->AddItem(id, amount))
+	{
+		PacketBuilder reply(PACKET_ITEM, PACKET_GET, 9);
+		reply.AddShort(0); // UID
+		reply.AddShort(id);
+		reply.AddThree(amount);
+		reply.AddChar(victim1->weight);
+		reply.AddChar(victim1->maxweight);
+		victim1->Send(reply);
+	}
+
+	if (victim2->AddItem(id, amount))
+	{
+		PacketBuilder reply(PACKET_ITEM, PACKET_GET, 9);
+		reply.AddShort(0); // UID
+		reply.AddShort(id);
+		reply.AddThree(amount);
+		reply.AddChar(victim2->weight);
+		reply.AddChar(victim2->maxweight);
+		victim2->Send(reply);
+	}
+}
+
 COMMAND_HANDLER_REGISTER(char_mod)
 	using namespace std::placeholders;
 	Register({"setlevel", {"victim", "value"}, {}, 4}, std::bind(SetX, _1, _2, "level"), CMD_FLAG_DUTY_RESTRICT);
@@ -381,8 +462,10 @@ COMMAND_HANDLER_REGISTER(char_mod)
 	Register({"dress", {"victim"}, {"id"}}, Dress); // victim is the actual optional argument
 	Register({"dress2", {"victim", "slot"}, {"id"}, 6}, Dress2); // victim is the actual optional argument
 	Register({"undress", {}, {"victim", "slot"}, 3}, Undress);
+	RegisterCharacter({"wed", {"victim1", "victim2"}, {}, 2}, Marry);
 
 	RegisterAlias("d2", "dress2");
+	RegisterAlias("weld", "wed");
 COMMAND_HANDLER_REGISTER_END(char_mod)
 
 }
