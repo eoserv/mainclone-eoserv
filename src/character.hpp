@@ -22,6 +22,8 @@
 #include "eodata.hpp"
 #include "map.hpp"
 
+#include "util/variant.hpp"
+
 #include <array>
 #include <deque>
 #include <list>
@@ -275,6 +277,7 @@ class Character : public Command_Source
 		std::list<Character_Spell> spells;
 		std::list<NPC *> unregister_npc;
 		std::map<short, std::shared_ptr<Quest_Context>> quests;
+		std::unordered_map<std::string, util::variant> vars;
 		std::set<Character_QuestState> quests_inactive;
 		std::string quest_string;
 

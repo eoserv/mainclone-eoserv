@@ -341,6 +341,44 @@ void QuestUnserialize(std::string serialized, Character* character)
 	}
 }
 
+std::string VarsSerialize(const std::unordered_map<std::string, util::variant> &list)
+{
+	std::string serialized;
+
+	UTIL_FOREACH(list, var)
+	{
+		serialized.append(var.first);
+		serialized.append(",");
+		serialized.append(var.second.GetString());
+		serialized.append(";");
+	}
+
+	return serialized;
+}
+
+std::unordered_map<std::string, util::variant> VarsUnserialize(const std::string& serialized)
+{
+	std::unordered_map<std::string, util::variant> list;
+
+	std::vector<std::string> parts = util::explode(';', serialized);
+
+	UTIL_FOREACH(parts, part)
+	{
+		std::size_t pp = 0;
+		pp = part.find_first_of(',', 0);
+
+		if (pp == std::string::npos)
+			continue;
+
+		std::string key = part.substr(0, pp);
+		util::variant value = part.substr(pp+1);
+
+		list.insert(std::make_pair(key, value));
+	}
+
+	return list;
+}
+
 std::vector<std::string> BotListUnserialize(std::string serialized)
 {
 	std::vector<std::string> bots = util::explode(',', serialized);
@@ -466,6 +504,7 @@ Character::Character(std::string name, World *world)
 	this->bank = ItemUnserialize(row["bank"]);
 	this->paperdoll = DollUnserialize(row["paperdoll"]);
 	this->spells = SpellUnserialize(row["spells"]);
+	this->vars = VarsUnserialize(row["vars"]);
 
 	this->player = 0;
 	std::string guild_tag = util::trim(static_cast<std::string>(row["guild"]));
@@ -1911,6 +1950,11 @@ void Character::FormulaVars(std::unordered_map<std::string, double> &vars, std::
 	vv(clas, "class") v(gender) v(race) v(hairstyle) v(haircolor)
 	v(mapid) v(x) v(y) v(direction) v(sitting) v(hidden) v(whispers) v(goldbank)
 	v(statpoints) v(skillpoints)
+
+	UTIL_FOREACH(this->vars, var)
+	{
+		vars.insert(std::pair<std::string, double>('$' + var.first, var.second));
+	}
 }
 
 #undef vv
@@ -2128,7 +2172,7 @@ void Character::Save()
 		this->str, this->intl, this->wis, this->agi, this->con, this->cha, this->statpoints, this->skillpoints, this->karma, int(this->sitting), int(this->hidden),
 		nointeract, this->bankmax, this->goldbank, this->Usage(), ItemSerialize(this->inventory).c_str(), ItemSerialize(this->bank).c_str(),
 		DollSerialize(this->paperdoll).c_str(), SpellSerialize(this->spells).c_str(), (this->guild ? this->guild->tag.c_str() : ""),
-		this->guild_rank, this->guild_rank_string.c_str(), quest_data.c_str(), "", this->real_name.c_str());
+		this->guild_rank, this->guild_rank_string.c_str(), quest_data.c_str(), VarsSerialize(this->vars).c_str(), this->real_name.c_str());
 }
 
 AdminLevel Character::SourceAccess() const

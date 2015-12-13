@@ -25,6 +25,7 @@
 #include <fstream>
 #include <functional>
 #include <iterator>
+#include <list>
 #include <map>
 #include <memory>
 #include <stack>
@@ -112,6 +113,8 @@ static void validate_state(const EOPlus::Quest& quest, const std::string& name, 
 		{"removestat", 2},
 
 		{"roll", 1},
+
+		{"varsetrpn", 2}
 	};
 
 	static std::map<std::string, info_t> rule_argument_info{
@@ -423,6 +426,63 @@ void Quest_Context::BeginState(const std::string& name, const EOPlus::State& sta
 	}
 }
 
+static double rpn_char_eval(std::stack<util::variant>&& s, Character* character)
+{
+	std::unordered_map<std::string, double> formula_vars;
+	character->FormulaVars(formula_vars);
+	return rpn_eval(s, formula_vars);
+}
+
+static double rpn_char_eval(std::deque<util::variant>&& dq, Character* character)
+{
+	std::reverse(UTIL_RANGE(dq));
+	std::stack<util::variant> s(std::move(dq));
+	return rpn_char_eval(std::move(s), character);
+}
+
+static util::variant var_interpolate(util::variant value, Character* character)
+{
+	std::string str_value = value;
+	std::list<std::pair<std::size_t, std::size_t>> replacements;
+
+	std::size_t pos = 0;
+
+	while (pos < str_value.length())
+	{
+		std::size_t open = str_value.find_first_of('{', pos);
+		std::size_t close = str_value.find_first_of('}', open);
+
+		if (open == std::string::npos || close == std::string::npos)
+			break;
+
+		replacements.push_back(std::make_pair(open, close - open));
+
+		pos = close + 1;
+	}
+
+	if (replacements.size() > 0)
+	{
+		std::unordered_map<std::string, double> vars;
+		character->FormulaVars(vars);
+
+		long offset = 0;
+
+		UTIL_FOREACH(replacements, range)
+		{
+			std::string id = str_value.substr(range.first + offset + 1, range.second - 1);
+			std::string replacement = util::to_string(util::rpn_eval(util::rpn_parse(id), vars));
+
+			str_value = str_value.substr(0, range.first + offset)
+			          + replacement
+			          + str_value.substr(range.first + range.second + offset + 1);
+
+			offset += long(replacement.length()) - long(id.length());
+		}
+	}
+
+	return str_value;
+}
+
 bool Quest_Context::DoAction(const EOPlus::Action& action)
 {
 	if (this->quest->Disabled())
@@ -432,7 +492,7 @@ bool Quest_Context::DoAction(const EOPlus::Action& action)
 
 	if (function_name == "setstate")
 	{
-		std::string state = util::lowercase(action.expr.args[0]);
+		std::string state = util::lowercase(var_interpolate(action.expr.args[0], this->character));
 		this->SetState(state);
 		return true;
 	}
@@ -464,7 +524,7 @@ bool Quest_Context::DoAction(const EOPlus::Action& action)
 	}
 	else if (function_name == "startquest")
 	{
-		short id = int(action.expr.args[0]);
+		short id = int(var_interpolate(action.expr.args[0], this->character));
 
 		auto context = character->GetQuest(id);
 
@@ -489,7 +549,7 @@ bool Quest_Context::DoAction(const EOPlus::Action& action)
 	else if (function_name == "resetquest")
 	{
 		short this_id = this->quest->ID();
-		short id = int(action.expr.args[0]);
+		short id = int(var_interpolate(action.expr.args[0], this->character));
 
 		auto context = this->character->GetQuest(id);
 
@@ -510,8 +570,8 @@ bool Quest_Context::DoAction(const EOPlus::Action& action)
 	else if (function_name == "setqueststate")
 	{
 		short this_id = this->quest->ID();
-		short id = int(action.expr.args[0]);
-		std::string state = std::string(action.expr.args[1]);
+		short id = int(var_interpolate(action.expr.args[0], this->character));
+		std::string state = std::string(var_interpolate(action.expr.args[1], this->character));
 
 		// WARNING: holds a non-tracked reference to shared_ptr
 		Quest_Context* quest = this->character->GetQuest(id).get();
@@ -523,17 +583,34 @@ bool Quest_Context::DoAction(const EOPlus::Action& action)
 			if (id == this_id)
 				return true;
 		}
+		else
+		{
+			auto it = this->character->world->quests.find(id);
+
+			if (it != this->character->world->quests.end())
+			{
+				// WARNING: holds a non-tracked reference to shared_ptr
+				Quest* quest = it->second.get();
+
+				if (quest->Disabled())
+					return false;
+
+				auto newcontext = std::make_shared<Quest_Context>(this->character, quest);
+				this->character->quests[it->first] = newcontext;
+				newcontext->SetState("begin");
+			}
+		}
 	}
 	else if (function_name == "showhint")
 	{
-		this->character->StatusMsg(action.expr.args[0]);
+		this->character->StatusMsg(var_interpolate(action.expr.args[0], this->character));
 	}
 	else if (function_name == "quake")
 	{
 		int strength = 5;
 
 		if (action.expr.args.size() >= 1)
-			strength = std::max(1, std::min(8, int(action.expr.args[0])));
+			strength = std::max(1, std::min(8, int(var_interpolate(action.expr.args[0], this->character))));
 
 		this->character->map->Effect(MAP_EFFECT_QUAKE, strength);
 	}
@@ -542,7 +619,7 @@ bool Quest_Context::DoAction(const EOPlus::Action& action)
 		int strength = 5;
 
 		if (action.expr.args.size() >= 1)
-			strength = std::max(1, std::min(8, int(action.expr.args[0])));
+			strength = std::max(1, std::min(8, int(var_interpolate(action.expr.args[0], this->character))));
 
 		UTIL_FOREACH(this->character->world->maps, map)
 		{
@@ -552,17 +629,20 @@ bool Quest_Context::DoAction(const EOPlus::Action& action)
 	}
 	else if (function_name == "setmap" || function_name == "setcoord")
 	{
-		this->character->Warp(int(action.expr.args[0]), int(action.expr.args[1]), int(action.expr.args[2]));
+		int map = int(var_interpolate(action.expr.args[0], this->character));
+		int x = int(var_interpolate(action.expr.args[1], this->character));
+		int y = int(var_interpolate(action.expr.args[2], this->character));
+		this->character->Warp(map, x, y);
 	}
 	else if (function_name == "playsound")
 	{
-		this->character->PlaySound(int(action.expr.args[0]));
+		this->character->PlaySound(int(var_interpolate(action.expr.args[0], this->character)));
 	}
 	else if (function_name == "giveexp")
 	{
 		bool level_up = false;
 
-		this->character->exp += int(action.expr.args[0]);
+		this->character->exp += int(var_interpolate(action.expr.args[0], this->character));
 
 		this->character->exp = std::min(this->character->exp, int(this->character->map->world->config["MaxExp"]));
 
@@ -604,8 +684,8 @@ bool Quest_Context::DoAction(const EOPlus::Action& action)
 	}
 	else if (function_name == "giveitem")
 	{
-		int id = int(action.expr.args[0]);
-		int amount = (action.expr.args.size() >= 2) ? int(action.expr.args[1]) : 1;
+		int id = int(var_interpolate(action.expr.args[0], this->character));
+		int amount = (action.expr.args.size() >= 2) ? int(var_interpolate(action.expr.args[1], this->character)) : 1;
 
 		if (this->character->AddItem(id, amount))
 		{
@@ -631,8 +711,8 @@ bool Quest_Context::DoAction(const EOPlus::Action& action)
 	}
 	else if (function_name == "removeitem")
 	{
-		int id = int(action.expr.args[0]);
-		int amount = (action.expr.args.size() >= 2) ? int(action.expr.args[1]) : 1;
+		int id = int(var_interpolate(action.expr.args[0], this->character));
+		int amount = (action.expr.args.size() >= 2) ? int(var_interpolate(action.expr.args[1], this->character)) : 1;
 
 		if (this->character->DelItem(id, amount))
 		{
@@ -645,7 +725,7 @@ bool Quest_Context::DoAction(const EOPlus::Action& action)
 	}
 	else if (function_name == "setclass")
 	{
-		this->character->clas = int(action.expr.args[0]);
+		this->character->clas = int(var_interpolate(action.expr.args[0], this->character));
 
 		this->character->CalculateStats();
 
@@ -672,12 +752,12 @@ bool Quest_Context::DoAction(const EOPlus::Action& action)
 	}
 	else if (function_name == "setrace")
 	{
-		this->character->race = Skin(int(action.expr.args[0]));
+		this->character->race = Skin(int(var_interpolate(action.expr.args[0], this->character)));
 		this->character->Warp(this->character->map->id, this->character->x, this->character->y);
 	}
 	else if (function_name == "removekarma")
 	{
-		this->character->karma -= int(action.expr.args[0]);
+		this->character->karma -= int(var_interpolate(action.expr.args[0], this->character));
 
 		if (this->character->karma < 0)
 			this->character->karma = 0;
@@ -690,7 +770,7 @@ bool Quest_Context::DoAction(const EOPlus::Action& action)
 	}
 	else if (function_name == "givekarma")
 	{
-		this->character->karma += int(action.expr.args[0]);
+		this->character->karma += int(var_interpolate(action.expr.args[0], this->character));
 
 		if (this->character->karma > 2000)
 			this->character->karma = 2000;
@@ -703,64 +783,57 @@ bool Quest_Context::DoAction(const EOPlus::Action& action)
 	}
 	else if (function_name == "settitle")
 	{
-		this->character->title = std::string(action.expr.args[0]);
+		this->character->title = std::string(var_interpolate(action.expr.args[0], this->character));
 	}
 	else if (function_name == "setfiance")
 	{
-		this->character->fiance = std::string(action.expr.args[0]);
+		this->character->fiance = std::string(var_interpolate(action.expr.args[0], this->character));
 	}
 	else if (function_name == "setpartner")
 	{
-		this->character->partner = std::string(action.expr.args[0]);
+		this->character->partner = std::string(var_interpolate(action.expr.args[0], this->character));
 	}
 	else if (function_name == "sethome")
 	{
-		this->character->home = std::string(action.expr.args[0]);
+		this->character->home = std::string(var_interpolate(action.expr.args[0], this->character));
 	}
 	else if (function_name == "setstat")
 	{
-		std::string stat = action.expr.args[0];
-		int value = action.expr.args[1];
+		std::string stat = var_interpolate(action.expr.args[0], this->character);
+		int value = int(var_interpolate(action.expr.args[1], this->character));
 
 		if (!modify_stat(stat, [value](int) { return value; }, this->character))
 			throw EOPlus::Runtime_Error("Unknown stat: " + stat);
 	}
 	else if (function_name == "givestat")
 	{
-		std::string stat = action.expr.args[0];
-		int value = action.expr.args[1];
+		std::string stat = var_interpolate(action.expr.args[0], this->character);
+		int value = int(var_interpolate(action.expr.args[1], this->character));
 
 		if (!modify_stat(stat, [value](int x) { return x + value; }, this->character))
 			throw EOPlus::Runtime_Error("Unknown stat: " + stat);
 	}
 	else if (function_name == "removestat")
 	{
-		std::string stat = action.expr.args[0];
-		int value = action.expr.args[1];
+		std::string stat = var_interpolate(action.expr.args[0], this->character);
+		int value = int(var_interpolate(action.expr.args[1], this->character));
 
 		if (!modify_stat(stat, [value](int x) { return x - value; }, this->character))
 			throw EOPlus::Runtime_Error("Unknown stat: " + stat);
 	}
 	else if (function_name == "roll")
 	{
-		this->progress["r"] = util::rand(1, int(action.expr.args[0]));
+		int maxroll = int(var_interpolate(action.expr.args[0], this->character));
+		this->progress["r"] = util::rand(1, maxroll);
+	}
+	else if (function_name == "varsetrpn")
+	{
+		std::string key = action.expr.args[0];
+		double value = rpn_char_eval(rpn_parse(action.expr.args[1]), this->character);
+		this->character->vars[key] = value;
 	}
 
 	return false;
-}
-
-static bool rpn_char_eval(std::stack<util::variant>&& s, Character* character)
-{
-	std::unordered_map<std::string, double> formula_vars;
-	character->FormulaVars(formula_vars);
-	return bool(rpn_eval(s, formula_vars));
-}
-
-static bool rpn_char_eval(std::deque<util::variant>&& dq, Character* character)
-{
-	std::reverse(UTIL_RANGE(dq));
-	std::stack<util::variant> s(std::move(dq));
-	return rpn_char_eval(std::move(s), character);
 }
 
 bool Quest_Context::CheckRule(const EOPlus::Expression& expr)
@@ -1112,6 +1185,7 @@ void Quest_Context::KilledPlayer()
 bool Quest_Context::IsHidden() const
 {
 	return this->GetQuest()->GetQuest()->info.hidden == EOPlus::Info::Hidden
+		|| (this->GetQuest()->GetQuest()->info.hidden == EOPlus::Info::HiddenEnd && this->StateName() == "end")
 	    || this->StateName() == "done";
 }
 

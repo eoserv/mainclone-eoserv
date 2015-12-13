@@ -10,6 +10,7 @@
 #include "../config.hpp"
 #include "../eodata.hpp"
 #include "../map.hpp"
+#include "../npc.hpp"
 #include "../party.hpp"
 #include "../quest.hpp"
 #include "../world.hpp"
@@ -90,6 +91,7 @@ void Item_Use(Character *character, PacketReader &reader)
 
 			case EIF::Heal:
 			{
+				// Title Certificate
 				if (id == 494)
 				{
 					character->DelItem(id, 1);
@@ -104,6 +106,34 @@ void Item_Use(Character *character, PacketReader &reader)
 
 					character->can_set_title = true;
 					character->ServerMsg("You can now set your title once using the #title command (max. 20 chars). If you log out your ticket will be wasted.");
+
+					character->Send(reply);
+					QuestUsedItems(character, id);
+
+					break;
+				}
+
+				// Christmas Scroll
+				if (id == 498)
+				{
+					unsigned char index = character->map->GenerateNPCIndex();
+
+					if (index > 250)
+						break;
+
+					character->DelItem(id, 1);
+
+					reply.ReserveMore(14);
+					reply.AddInt(character->HasItem(id));
+					reply.AddChar(character->weight);
+					reply.AddChar(character->maxweight);
+					reply.AddInt(0);
+					reply.AddShort(character->hp);
+					reply.AddShort(character->tp);
+
+					NPC *npc = new NPC(character->map, 328, character->x, character->y, 1, util::rand(0, 3), index, true);
+					character->map->npcs.push_back(npc);
+					npc->Spawn();
 
 					character->Send(reply);
 					QuestUsedItems(character, id);

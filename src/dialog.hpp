@@ -7,6 +7,7 @@
 #ifndef DIALOG_HPP_INCLUDED
 #define DIALOG_HPP_INCLUDED
 
+#include "fwd/character.hpp"
 #include "fwd/dialog.hpp"
  
 #include "fwd/packet.hpp"
@@ -29,7 +30,7 @@ class Dialog
 		bool CheckLink(int) const;
 
 		int PacketLength() const;
-		void BuildPacket(PacketBuilder&) const;
+		void BuildPacket(PacketBuilder&, Character*) const;
 
 		~Dialog();
 };

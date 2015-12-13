@@ -43,16 +43,6 @@ void SetX(const std::vector<std::string>& arguments, Command_Source* from, std::
 	}
 	else
 	{
-		std::string title_string = "";
-
-		for (std::size_t i = 1; i < arguments.size(); ++i)
-		{
-			title_string += arguments[i];
-
-			if (i < arguments.size() - 1)
-				title_string += " ";
-		}
-
 		bool appearance = false;
 		bool failure = false;
 		bool level = false;
@@ -90,7 +80,7 @@ void SetX(const std::vector<std::string>& arguments, Command_Source* from, std::
 				from->ServerMsg(from->SourceWorld()->i18n.Format("command_access_denied"));
 			}
 		}
-		else if (set == "title") victim->title = title_string;
+		else if (set == "title") victim->title = util::implode(" ", arguments.begin() + 1, arguments.end());
 		else if (set == "fiance") victim->fiance = (arguments.size() > 1) ? arguments[1] : "";
 		else if (set == "partner") victim->partner = (arguments.size() > 1) ? arguments[1] : "";
 		else if (set == "home") victim->home = (arguments.size() > 1) ? arguments[1] : "";

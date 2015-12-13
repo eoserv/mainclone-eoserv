@@ -150,8 +150,23 @@ std::string variant::GetString() const
 			break;
 
 		case type_float:
-			snprintf(buf, 1024, "%g", this->val_float);
+			snprintf(buf, 1024, "%.15g", this->val_float);
 			this->val_string = buf;
+			if (this->val_string.find('e') != std::string::npos)
+			{
+				this->val_float = 0.0;
+				this->val_string = '0';
+			}
+			else if (this->val_string.find('.') != std::string::npos)
+			{
+				std::size_t z = this->val_string.find_last_not_of('0');
+
+				if (z == std::string::npos && this->val_string.find('.') == this->val_string.length() - 1)
+					z = this->val_string.length() - 1;
+
+				if (z != std::string::npos)
+					this->val_string = this->val_string.substr(0, z+1);
+			}
 			break;
 
 		case type_bool:
