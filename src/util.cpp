@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <climits>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -236,6 +237,15 @@ double to_float(const std::string &subject)
 std::string to_string(int subject)
 {
 	return static_cast<std::string>(util::variant(subject));
+}
+
+std::string to_string(unsigned int subject)
+{
+	// FIXME
+	if (subject <= INT_MAX)
+		return to_string(static_cast<int>(subject));
+	else
+		return to_string(static_cast<int>(INT_MAX));
 }
 
 std::string to_string(double subject)

@@ -81,7 +81,7 @@ static void open_quest_dialog(Character* character, NPC* npc, int quest_id, int 
 			reply.AddBreakString(dialog.quest->GetQuest()->Name());
 		}
 
-		dialogs[this_dialog].dialog->BuildPacket(reply);
+		dialogs[this_dialog].dialog->BuildPacket(reply, character);
 
 		character->Send(reply);
 	}

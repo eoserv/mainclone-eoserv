@@ -10,6 +10,7 @@
 #include "../util/variant.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <stack>
@@ -187,7 +188,12 @@ double rpn_eval(std::stack<util::variant> stack, std::unordered_map<std::string,
 		}
 		else
 		{
-			argstack.push(static_cast<double>(val));
+			std::string stringval = static_cast<std::string>(val);
+			
+			if (stringval.length() > 0 && (std::isdigit(stringval[0]) || stringval[0] == '-' || stringval[0] == '+' || stringval[0] == '.'))
+				argstack.push(static_cast<double>(val));
+			else
+				argstack.push(0.0);
 		}
 	}
 

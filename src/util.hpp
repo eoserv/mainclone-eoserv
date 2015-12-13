@@ -70,6 +70,31 @@ std::vector<std::string> explode(char delimiter, const std::string&);
 std::vector<std::string> explode(const std::string& delimiter, const std::string&);
 
 /**
+ * Combine a list of strings in to a single string, with a separator
+ */
+template <class I>
+std::string implode(const std::string& delimiter, I begin, I end)
+{
+	std::string result;
+
+	for (auto it = begin; it != end; ++it)
+	{
+		if (it != begin)
+			result += delimiter;
+
+		result += *it;
+	}
+
+	return result;
+}
+
+template <class R>
+std::string implode(const std::string& delimiter, R r)
+{
+	return implode(delimiter, std::begin(r), std::end(r));
+}
+
+/**
  * Parse a string time period to a number
  * @param timestr amount of time in a human readable format (eg. 2h30m)
  * @return number of seconds
@@ -81,6 +106,7 @@ unsigned int to_uint_raw(const std::string &);
 double to_float(const std::string &);
 
 std::string to_string(int);
+std::string to_string(unsigned int);
 std::string to_string(double);
 
 std::string lowercase(const std::string&);
