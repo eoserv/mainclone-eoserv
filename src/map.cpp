@@ -112,6 +112,8 @@ void map_close_door(void *map_close_void)
 	map_close_door_struct *close(static_cast<map_close_door_struct *>(map_close_void));
 
 	close->map->CloseDoor(close->x, close->y);
+
+	delete close;
 }
 
 struct map_evacuate_struct
@@ -158,6 +160,7 @@ void map_evacuate(void *map_evacuate_void)
 		}
 
 		evac->map->evacuate_lock = false;
+		delete evac;
 	}
 }
 
@@ -690,6 +693,16 @@ void Map::Unload()
 	}
 
 	this->npcs.clear();
+
+	if (this->arena)
+	{
+		UTIL_FOREACH(this->arena->spawns, spawn)
+			delete spawn;
+
+		delete this->arena;
+	}
+
+	this->arena = nullptr;
 
 	this->chests.clear();
 	this->tiles.clear();
