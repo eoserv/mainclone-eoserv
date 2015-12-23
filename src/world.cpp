@@ -259,7 +259,8 @@ void world_spikes(void *world_void)
 	
 	for (Map* map : world->maps)
 	{
-		map->TimedSpikes();
+		if (map->exists)
+			map->TimedSpikes();
 	}
 }
 
@@ -269,7 +270,8 @@ void world_drains(void *world_void)
 	
 	for (Map* map : world->maps)
 	{
-		map->TimedDrains();
+		if (map->exists)
+			map->TimedDrains();
 	}
 }
 
@@ -279,7 +281,8 @@ void world_quakes(void *world_void)
 	
 	for (Map* map : world->maps)
 	{
-		map->TimedQuakes();
+		if (map->exists)
+			map->TimedQuakes();
 	}
 }
 
@@ -1465,18 +1468,25 @@ bool World::IsInstrument(int graphic_id)
 
 World::~World()
 {
-	std::list<Character *> todelete;
-
-	UTIL_FOREACH(this->characters, character)
+	UTIL_FOREACH(this->maps, map)
 	{
-		todelete.push_back(character);
+		delete map;
 	}
 
-	UTIL_FOREACH(todelete, character)
+	UTIL_FOREACH(this->homes, home)
 	{
-		character->player->client->Close(true);
-		delete character;
+		delete home;
 	}
+
+	UTIL_FOREACH(this->boards, board)
+	{
+		delete board;
+	}
+
+	delete this->eif;
+	delete this->enf;
+	delete this->esf;
+	delete this->ecf;
 
 	delete this->guildmanager;
 

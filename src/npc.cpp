@@ -78,17 +78,54 @@ NPC::NPC(Map *map, short id, unsigned char x, unsigned char y, unsigned char spa
 
 	this->citizenship = 0;
 
+	this->drops_chance_total = 0.0;
+
 	this->LoadShopDrop();
 }
 
-void NPC::LoadShopDrop()
+void NPC::UnloadShopDrop()
 {
+	UTIL_FOREACH(this->drops, drop)
+	{
+		delete drop;
+	}
+
+	UTIL_FOREACH(this->shop_trade, trade)
+	{
+		delete trade;
+	}
+
+	UTIL_FOREACH(this->shop_craft, craft)
+	{
+		UTIL_FOREACH(craft->ingredients, item)
+		{
+			delete item;
+		}
+
+		delete craft;
+	}
+
+	UTIL_FOREACH(this->skill_learn, skill)
+	{
+		delete skill;
+	}
+
 	this->drops.clear();
 	this->shop_trade.clear();
 	this->shop_craft.clear();
 	this->skill_learn.clear();
 
 	this->drops_chance_total = 0.0;
+
+	if (this->citizenship)
+		delete this->citizenship;
+
+	this->citizenship = nullptr;
+}
+
+void NPC::LoadShopDrop()
+{
+	this->UnloadShopDrop();
 
 	Config::iterator drops = map->world->drops_config.find(util::to_string(this->id));
 	if (drops != map->world->drops_config.end())
@@ -287,8 +324,6 @@ void NPC::LoadShopDrop()
 	{
 		home_vend_id = this->Data().vendor_id;
 	}
-
-	this->citizenship = 0;
 
 	if (this->Data().type == ENF::Type::Inn && home_vend_id > 0)
 	{
@@ -1066,6 +1101,8 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 			std::remove(UTIL_RANGE(opponent->attacker->unregister_npc), this),
 			opponent->attacker->unregister_npc.end()
 		);
+
+		delete opponent;
 	}
 
 	this->damagelist.clear();
@@ -1148,6 +1185,8 @@ void NPC::Die(bool show)
 			std::remove(UTIL_RANGE(opponent->attacker->unregister_npc), this),
 			opponent->attacker->unregister_npc.end()
 		);
+
+		delete opponent;
 	}
 
 	this->damagelist.clear();
@@ -1309,4 +1348,16 @@ NPC::~NPC()
 			character->npc_type = ENF::NPC;
 		}
 	}
+
+	UTIL_FOREACH(this->damagelist, opponent)
+	{
+		opponent->attacker->unregister_npc.erase(
+			std::remove(UTIL_RANGE(opponent->attacker->unregister_npc), this),
+			opponent->attacker->unregister_npc.end()
+		);
+
+		delete opponent;
+	}
+
+	this->UnloadShopDrop();
 }
