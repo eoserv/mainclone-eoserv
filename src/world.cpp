@@ -427,7 +427,7 @@ World::World(std::array<std::string, 6> dbinfo, const Config &eoserv_config, con
 	this->ecf = new ECF(this->config["ECF"]);
 
 	std::size_t num_npcs = this->enf->data.size();
-	this->npc_data.resize(num_npcs + 1);
+	this->npc_data.resize(num_npcs);
 	for (std::size_t i = 0; i < num_npcs; ++i)
 	{
 		auto& npc = this->npc_data[i];
@@ -924,7 +924,6 @@ void World::Rehash()
 	UTIL_FOREACH(this->maps, map)
 	{
 		map->LoadArena();
-
 	}
 
 	UTIL_FOREACH_CREF(this->npc_data, npc)
@@ -959,7 +958,7 @@ void World::ReloadPub(bool quiet)
 	}
 
 	std::size_t current_npcs = this->npc_data.size();
-	std::size_t new_npcs = this->enf->data.size() + 1;
+	std::size_t new_npcs = this->enf->data.size();
 
 	this->npc_data.resize(new_npcs);
 
