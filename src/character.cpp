@@ -530,7 +530,7 @@ Character::Character(std::string name, World *world)
 	this->quest_string = GetRow<std::string>(row, "quest");
 
 	this->nointeract = GetRow<int>(row, "nointeract");
-	this->adminsecret = false;
+	this->adminsecret = (this->admin == 0);
 
 	if (this->admin >= static_cast<int>(world->config["NoInteractDefaultAdmin"]) && !(this->nointeract & NoInteractCustom))
 	{
