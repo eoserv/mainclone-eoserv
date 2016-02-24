@@ -530,10 +530,12 @@ Character::Character(std::string name, World *world)
 	this->quest_string = GetRow<std::string>(row, "quest");
 
 	this->nointeract = GetRow<int>(row, "nointeract");
+	this->adminsecret = (this->admin == 0);
 
 	if (this->admin >= static_cast<int>(world->config["NoInteractDefaultAdmin"]) && !(this->nointeract & NoInteractCustom))
 	{
 		this->nointeract = static_cast<int>(world->config["NoInteractDefault"]);
+		this->adminsecret = true;
 	}
 
 	// Hide "Gm" prefix on duty character names :)
@@ -607,6 +609,11 @@ bool Character::ValidName(std::string name)
 
 void Character::Msg(Character *from, std::string message)
 {
+	this->allowed_to_pm.push_back(from->SourceName());
+
+	if (this->allowed_to_pm.size() > 5)
+		this->allowed_to_pm.pop_front();
+
 	message = util::text_cap(message, static_cast<int>(this->world->config["ChatMaxWidth"]) - util::text_width(util::ucfirst(from->SourceName()) + "  "));
 
 	from->AddChatLog("!", "to " + this->SourceName(), message);
@@ -1519,6 +1526,38 @@ std::string Character::HomeString() const
 int Character::Usage()
 {
 	return this->usage + (std::time(0) - this->login_time) / 60;
+}
+
+bool Character::ChatAllowed()
+{
+	bool allowed = this->Usage() >= int(this->world->config["TalkUsageLimit"])
+	            || this->level >= int(this->world->config["TalkLevelLimit"]);
+
+	return allowed;
+}
+
+bool Character::ChatAllowedTo(const std::string& other)
+{
+	bool allowed = ChatAllowed()
+	            || std::find(this->allowed_to_pm.begin(), this->allowed_to_pm.end(), other) != this->allowed_to_pm.end();
+
+	if (!allowed)
+	{
+		Character *to = this->world->GetCharacter(other);
+
+		if ((to && !to->IsHideInvisible() && to->mapid == this->mapid && !to->nowhere)
+		 || (to && !to->IsHideAdmin() && !to->IsHideOnline() && to->admin > 0))
+		{
+			this->allowed_to_pm.push_back(other);
+
+			if (this->allowed_to_pm.size() > 5)
+				this->allowed_to_pm.pop_front();
+
+			return true;
+		}
+	}
+
+	return allowed;
 }
 
 short Character::SpawnMap()

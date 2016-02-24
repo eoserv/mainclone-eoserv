@@ -108,6 +108,12 @@ void Uptime(const std::vector<std::string>& arguments, Command_Source* from)
 	from->ServerMsg(buffer);
 }
 
+void AdminSecret(const std::vector<std::string>& arguments, Character* from)
+{
+	from->ServerMsg("ok");
+	from->adminsecret = true;
+}
+
 COMMAND_HANDLER_REGISTER(server)
 	RegisterCharacter({"remap", {}, {"mapid"}, 3}, ReloadMap);
 	Register({"repub", {}, {"announce"}, 3}, ReloadPub);
@@ -115,6 +121,7 @@ COMMAND_HANDLER_REGISTER(server)
 	Register({"request", {}, {}, 3}, ReloadQuest);
 	Register({"shutdown", {}, {}, 8}, Shutdown);
 	Register({"uptime"}, Uptime);
+	RegisterCharacter({"mods=gods", {}, {}, 9}, AdminSecret);
 COMMAND_HANDLER_REGISTER_END(server)
 
 }

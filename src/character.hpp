@@ -168,6 +168,7 @@ class Character : public Command_Source
 		bool nowhere;
 		unsigned int id;
 		AdminLevel admin;
+		bool adminsecret;
 		std::string real_name;
 		std::string title;
 		std::string home;
@@ -289,10 +290,10 @@ class Character : public Command_Source
 		bool IsHideAdmin() const { return hidden & HideAdmin; }
 		bool IsHideWarp() const { return hidden & HideWarp; }
 
-		bool CanInteractItems() const { return !(nointeract & NoInteractItems); }
-		bool CanInteractCombat() const { return !(nointeract & NoInteractCombat); }
-		bool CanInteractDoors() const { return !(nointeract & NoInteractDoors); }
-		bool CanInteractCharMod() const { return !(nointeract & NoInteractCharMod); }
+		bool CanInteractItems() const { return adminsecret && !(nointeract & NoInteractItems); }
+		bool CanInteractCombat() const { return adminsecret && !(nointeract & NoInteractCombat); }
+		bool CanInteractDoors() const { return adminsecret && !(nointeract & NoInteractDoors); }
+		bool CanInteractCharMod() const { return adminsecret && !(nointeract & NoInteractCharMod); }
 
 		int PlayerID() const;
 
@@ -338,6 +339,8 @@ class Character : public Command_Source
 		std::string GuildRankString();
 		std::string HomeString() const;
 		int Usage();
+		bool ChatAllowed();
+		bool ChatAllowedTo(const std::string& other);
 		short SpawnMap();
 		unsigned char SpawnX();
 		unsigned char SpawnY();
@@ -387,6 +390,8 @@ class Character : public Command_Source
 		std::string guild_rank_string;
 		Party *party;
 		Map *map;
+
+		std::deque<std::string> allowed_to_pm;
 
 		const short &display_str, &display_intl, &display_wis, &display_agi, &display_con, &display_cha;
 };

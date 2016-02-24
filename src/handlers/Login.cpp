@@ -89,6 +89,7 @@ void Login_Request(EOClient *client, PacketReader &reader)
 
 		if (max_login_attempts != 0 && ++client->login_attempts >= max_login_attempts)
 		{
+			Console::Out("Max login attemtps exceeded: %s (%s)", username.c_str(), std::string(client->GetRemoteAddr()).c_str());
 			client->Close();
 		}
 

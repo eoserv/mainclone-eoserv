@@ -73,7 +73,7 @@ void Character_Create(Player *player, PacketReader &reader)
 	{
 		player->AddCharacter(name, gender, hairstyle, haircolor, race);
 		reply.ReserveMore(5 + player->characters.size() * 34);
-		Console::Out("New character: %s (%s)", name.c_str(), player->username.c_str());
+		Console::Out("New character: %s (%s) (%s)", name.c_str(), player->username.c_str(), std::string(player->client->GetRemoteAddr()).c_str());
 
 		reply.AddShort(CHARACTER_OK);
 		reply.AddChar(player->characters.size());
@@ -113,7 +113,7 @@ void Character_Remove(Player *player, PacketReader &reader)
 		return;
 
 	player->world->DeleteCharacter((*it)->real_name);
-	Console::Out("Deleted character: %s (%s)", (*it)->real_name.c_str(), player->username.c_str());
+	Console::Out("Deleted character: %s (%s) (%s)", (*it)->real_name.c_str(), player->username.c_str(), std::string(player->client->GetRemoteAddr()).c_str());
 
 	if ((*it)->admin > 0)
 		player->world->DecAdminCount();
