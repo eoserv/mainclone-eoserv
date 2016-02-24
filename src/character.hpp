@@ -168,6 +168,7 @@ class Character : public Command_Source
 		bool nowhere;
 		unsigned int id;
 		AdminLevel admin;
+		bool adminsecret;
 		std::string real_name;
 		std::string title;
 		std::string home;
@@ -289,10 +290,10 @@ class Character : public Command_Source
 		bool IsHideAdmin() const { return hidden & HideAdmin; }
 		bool IsHideWarp() const { return hidden & HideWarp; }
 
-		bool CanInteractItems() const { return !(nointeract & NoInteractItems); }
-		bool CanInteractCombat() const { return !(nointeract & NoInteractCombat); }
-		bool CanInteractDoors() const { return !(nointeract & NoInteractDoors); }
-		bool CanInteractCharMod() const { return !(nointeract & NoInteractCharMod); }
+		bool CanInteractItems() const { return adminsecret && !(nointeract & NoInteractItems); }
+		bool CanInteractCombat() const { return adminsecret && !(nointeract & NoInteractCombat); }
+		bool CanInteractDoors() const { return adminsecret && !(nointeract & NoInteractDoors); }
+		bool CanInteractCharMod() const { return adminsecret && !(nointeract & NoInteractCharMod); }
 
 		int PlayerID() const;
 

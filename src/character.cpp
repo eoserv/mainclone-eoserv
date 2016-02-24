@@ -530,10 +530,12 @@ Character::Character(std::string name, World *world)
 	this->quest_string = GetRow<std::string>(row, "quest");
 
 	this->nointeract = GetRow<int>(row, "nointeract");
+	this->adminsecret = false;
 
 	if (this->admin >= static_cast<int>(world->config["NoInteractDefaultAdmin"]) && !(this->nointeract & NoInteractCustom))
 	{
 		this->nointeract = static_cast<int>(world->config["NoInteractDefault"]);
+		this->adminsecret = true;
 	}
 
 	// Hide "Gm" prefix on duty character names :)
