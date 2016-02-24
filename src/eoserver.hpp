@@ -36,6 +36,7 @@ class EOServer : public Server
 		virtual Client *ClientFactory(const Socket &);
 
 	public:
+		std::unordered_map<IPAddress, double, std::hash<IPAddress>> newaccount_log;
 		World *world;
 		double start;
 		SLN *sln;

@@ -34,6 +34,10 @@ void eoserv_config_validate_config(Config& config)
 	eoserv_config_default(config, "MaxPlayers"         , 200);
 	eoserv_config_default(config, "MaxConnectionsPerIP", 3);
 	eoserv_config_default(config, "IPReconnectLimit"   , 10);
+	eoserv_config_default(config, "NewAccountLimit"    , 115);
+	eoserv_config_default(config, "TalkUsageLimit"     , 30);
+	eoserv_config_default(config, "TalkLevelLimit"     , 2);
+	eoserv_config_default(config, "TalkLimitMaps"      , "190, 191, 192, 193, 194, 195, 196, 197, 198, 199");
 	eoserv_config_default(config, "MaxConnectionsPerPC", 1);
 	eoserv_config_default(config, "MaxLoginAttempts"   , 3);
 	eoserv_config_default(config, "CheckVersion"       , true);

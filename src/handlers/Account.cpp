@@ -48,6 +48,36 @@ void Account_Request(EOClient *client, PacketReader &reader)
 	}
 	else
 	{
+		bool throttle = false;
+		IPAddress remote_addr = client->GetRemoteAddr();
+
+		const int reconnect_limit = int(client->server()->world->config["NewAccountLimit"]);
+
+		UTIL_IFOREACH(client->server()->newaccount_log, connection)
+		{
+			if (connection->second + reconnect_limit < Timer::GetTime())
+			{
+				connection = client->server()->newaccount_log.erase(connection);
+
+				if (connection == client->server()->newaccount_log.end())
+					break;
+
+				continue;
+			}
+
+			if (connection->first == remote_addr)
+			{
+				throttle = true;
+			}
+		}
+
+		if (throttle)
+		{
+			Console::Wrn("New account from %s was rejected (registering too fast)", std::string(client->GetRemoteAddr()).c_str());
+			client->Close(true);
+			return;
+		}
+
 		reply.AddShort(ACCOUNT_CONTINUE);
 		reply.AddString("OK");
 	}
@@ -109,12 +139,42 @@ void Account_Create(EOClient *client, PacketReader &reader)
 	}
 	else
 	{
-		username = util::lowercase(username);
+		bool throttle = false;
+		IPAddress remote_addr = client->GetRemoteAddr();
+
+		const int reconnect_limit = int(client->server()->world->config["NewAccountLimit"]);
+
+		UTIL_IFOREACH(client->server()->newaccount_log, connection)
+		{
+			if (connection->second + reconnect_limit < Timer::GetTime())
+			{
+				connection = client->server()->newaccount_log.erase(connection);
+
+				if (connection == client->server()->newaccount_log.end())
+					break;
+
+				continue;
+			}
+
+			if (connection->first == remote_addr)
+			{
+				throttle = true;
+			}
+		}
+
+		client->server()->newaccount_log[remote_addr] = Timer::GetTime();
+
+		if (throttle)
+		{
+			Console::Wrn("New account from %s was rejected (registering too fast)", std::string(client->GetRemoteAddr()).c_str());
+			client->Close(true);
+			return;
+		}
 
 		client->server()->world->CreatePlayer(username, std::move(password), fullname, location, email, computer, util::to_string(hdid), static_cast<std::string>(client->GetRemoteAddr()));
 		reply.AddShort(ACCOUNT_CREATED);
 		reply.AddString("OK");
-		Console::Out("New account: %s", username.c_str());
+		Console::Out("New account: %s (%s)", username.c_str(), std::string(client->GetRemoteAddr()).c_str());
 	}
 
 	client->Send(reply);
@@ -136,6 +196,8 @@ void Account_Agree(Player *player, PacketReader &reader)
 	{
 		return;
 	}
+
+	username = util::lowercase(username);
 
 	if (!Player::ValidName(username))
 	{
@@ -174,6 +236,7 @@ void Account_Agree(Player *player, PacketReader &reader)
 	PacketBuilder reply(PACKET_ACCOUNT, PACKET_REPLY, 4);
 	reply.AddShort(ACCOUNT_CHANGED);
 	reply.AddString("OK");
+	Console::Out("Changed password: %s (%s)", username.c_str(), std::string(player->client->GetRemoteAddr()).c_str());
 
 	player->Send(reply);
 }

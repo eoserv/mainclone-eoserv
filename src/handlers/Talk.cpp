@@ -71,6 +71,12 @@ void Talk_Msg(Character *character, PacketReader &reader)
 		return;
 	}
 
+	if (!character->ChatAllowed())
+	{
+		character->ServerMsg(character->world->i18n.Format("global_block"));
+		return;
+	}
+
 	std::string message = reader.GetEndString();
 	limit_message(message, static_cast<int>(character->world->config["ChatLength"]));
 
@@ -89,6 +95,18 @@ void Talk_Tell(Character *character, PacketReader &reader)
 
 	if (to && !to->IsHideOnline())
 	{
+		if (!character->ChatAllowedTo(to->SourceName()))
+		{
+			character->ServerMsg(character->world->i18n.Format("pm_block"));
+
+			PacketBuilder reply(PACKET_TALK, PACKET_REPLY, 2 + name.length());
+			reply.AddShort(TALK_NOTFOUND);
+			reply.AddString(name);
+			character->Send(reply);
+
+			return;
+		}
+
 		if (to->whispers)
 		{
 			to->Msg(character, message);

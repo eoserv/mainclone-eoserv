@@ -338,6 +338,8 @@ class Character : public Command_Source
 		std::string GuildRankString();
 		std::string HomeString() const;
 		int Usage();
+		bool ChatAllowed();
+		bool ChatAllowedTo(const std::string& other);
 		short SpawnMap();
 		unsigned char SpawnX();
 		unsigned char SpawnY();
@@ -387,6 +389,8 @@ class Character : public Command_Source
 		std::string guild_rank_string;
 		Party *party;
 		Map *map;
+
+		std::deque<std::string> allowed_to_pm;
 
 		const short &display_str, &display_intl, &display_wis, &display_agi, &display_con, &display_cha;
 };
