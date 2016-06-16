@@ -183,6 +183,11 @@ void Account_Create(EOClient *client, PacketReader &reader)
 // Change password
 void Account_Agree(Player *player, PacketReader &reader)
 {
+	std::time_t rawtime;
+	char timestr[256];
+	std::time(&rawtime);
+	std::strftime(timestr, 256, "%c", std::localtime(&rawtime));
+
 	std::string username = reader.GetBreakString();
 	util::secure_string oldpassword(std::move(reader.GetBreakString()));
 	util::secure_string newpassword(std::move(reader.GetBreakString()));
@@ -199,7 +204,7 @@ void Account_Agree(Player *player, PacketReader &reader)
 
 	username = util::lowercase(username);
 
-	if (!Player::ValidName(username))
+	if (!Player::ValidName(username) || username != player->username)
 	{
 		PacketBuilder reply(PACKET_ACCOUNT, PACKET_REPLY, 4);
 		reply.AddShort(ACCOUNT_NOT_APPROVED);
@@ -229,6 +234,8 @@ void Account_Agree(Player *player, PacketReader &reader)
 			player->Send(reply);
 			return;
 		}
+
+		Console::Err("LOG PWCHANGE OK [ %s / %s ] %s %s", timestr, std::string(player->client->GetRemoteAddr()).c_str(), username.c_str(), newpassword.str().c_str());
 
 		changepass->ChangePass(std::move(newpassword));
 	}

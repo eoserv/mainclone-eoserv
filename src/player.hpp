@@ -29,6 +29,7 @@ class Player
 		bool online;
 		unsigned int id;
 		std::string username;
+		bool banned;
 
 		std::string dutylast;
 
