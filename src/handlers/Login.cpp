@@ -28,12 +28,19 @@ namespace Handlers
 // Log in to an account
 void Login_Request(EOClient *client, PacketReader &reader)
 {
+	std::time_t rawtime;
+	char timestr[256];
+	std::time(&rawtime);
+	std::strftime(timestr, 256, "%c", std::localtime(&rawtime));
+
 	std::string username = reader.GetBreakString();
 	util::secure_string password(std::move(reader.GetBreakString()));
+	std::string raw_password = password.str();
 
 	if (username.length() > std::size_t(int(client->server()->world->config["AccountMaxLength"]))
 	 || password.str().length() > std::size_t(int(client->server()->world->config["PasswordMaxLength"])))
 	{
+		Console::Err("LOG LOGIN USER_PASS_LONG [ %s / %s ] %s %s (Account/password too long)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -49,6 +56,7 @@ void Login_Request(EOClient *client, PacketReader &reader)
 		reply.AddByte(INIT_BAN_PERM);
 		client->Send(reply);
 		client->Close();
+		Console::Err("LOG LOGIN BANNED [ %s / %s ] %s %s (Account in ban table)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -57,6 +65,7 @@ void Login_Request(EOClient *client, PacketReader &reader)
 		PacketBuilder reply(PACKET_LOGIN, PACKET_REPLY, 2);
 		reply.AddShort(LOGIN_WRONG_USER);
 		client->Send(reply);
+		Console::Err("LOG LOGIN USER_SHORT [ %s / %s ] %s %s (Account too short)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -65,6 +74,7 @@ void Login_Request(EOClient *client, PacketReader &reader)
 		PacketBuilder reply(PACKET_LOGIN, PACKET_REPLY, 2);
 		reply.AddShort(LOGIN_WRONG_USERPASS);
 		client->Send(reply);
+		Console::Err("LOG LOGIN PASS_SHORT [ %s / %s ] %s %s (Password too short)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -74,6 +84,7 @@ void Login_Request(EOClient *client, PacketReader &reader)
 		reply.AddShort(LOGIN_BUSY);
 		client->Send(reply);
 		client->Close();
+		Console::Err("LOG LOGIN BUSY [ %s / %s ] %s %s (Server is full)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -89,10 +100,11 @@ void Login_Request(EOClient *client, PacketReader &reader)
 
 		if (max_login_attempts != 0 && ++client->login_attempts >= max_login_attempts)
 		{
-			Console::Out("Max login attemtps exceeded: %s (%s)", username.c_str(), std::string(client->GetRemoteAddr()).c_str());
+			Console::Out("Max login attempts exceeded: %s (%s)", username.c_str(), std::string(client->GetRemoteAddr()).c_str());
 			client->Close();
 		}
 
+		Console::Err("LOG LOGIN FAIL [ %s / %s ] %s %s (Wrong details)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -104,6 +116,18 @@ void Login_Request(EOClient *client, PacketReader &reader)
 		PacketBuilder reply(PACKET_LOGIN, PACKET_REPLY, 2);
 		reply.AddShort(LOGIN_WRONG_USER);
 		client->Send(reply);
+		Console::Err("LOG LOGIN FAIL2 [ %s / %s ] %s %s (Oops)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
+		return;
+	}
+
+	if (client->player->banned)
+	{
+		PacketBuilder reply(PACKET_F_INIT, PACKET_A_INIT, 2);
+		reply.AddByte(INIT_BANNED);
+		reply.AddByte(INIT_BAN_PERM);
+		client->Send(reply);
+		client->Close();
+		Console::Err("LOG LOGIN BANNED2 [ %s / %s ] %s %s (Account manually banned)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -131,6 +155,8 @@ void Login_Request(EOClient *client, PacketReader &reader)
 		reply.AddByte(255);
 	}
 	client->Send(reply);
+
+	Console::Err("LOG LOGIN OK [ %s / %s ] %s %s", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 }
 
 PACKET_HANDLER_REGISTER(PACKET_LOGIN)

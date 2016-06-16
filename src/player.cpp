@@ -28,7 +28,7 @@ Player::Player(std::string username, World *world)
 {
 	this->world = world;
 
-	Database_Result res = this->world->db.Query("SELECT `username`, `password` FROM `accounts` WHERE `username` = '$'", username.c_str());
+	Database_Result res = this->world->db.Query("SELECT `username`, `password`, `banned` FROM `accounts` WHERE `username` = '$'", username.c_str());
 	if (res.empty())
 	{
 		throw std::runtime_error("Player not found (" + username + ")");
@@ -41,6 +41,7 @@ Player::Player(std::string username, World *world)
 	this->character = nullptr;
 
 	this->username = static_cast<std::string>(row["username"]);
+	this->banned = static_cast<int>(row["banned"]);
 
 	res = this->world->db.Query("SELECT `name` FROM `characters` WHERE `account` = '$' ORDER BY `exp` DESC", username.c_str());
 

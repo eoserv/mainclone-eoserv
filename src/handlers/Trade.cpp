@@ -141,6 +141,13 @@ void Trade_Agree(Character *character, PacketReader &reader)
 
 		if (character->trade_partner->trade_agree)
 		{
+			std::time_t rawtime;
+			char timestr[256];
+			std::time(&rawtime);
+			std::strftime(timestr, 256, "%c", std::localtime(&rawtime));
+
+			std::string par1str, par2str;
+
 			PacketBuilder builder(PACKET_TRADE, PACKET_USE,
 				6 + character->trade_partner->trade_inventory.size() * 6 + character->trade_inventory.size() * 6);
 
@@ -151,6 +158,7 @@ void Trade_Agree(Character *character, PacketReader &reader)
 				builder.AddInt(item.amount);
 				character->trade_partner->DelItem(item.id, item.amount);
 				character->AddItem(item.id, item.amount);
+				par1str += " " + util::to_string(item.id) + ":" + util::to_string(item.amount);
 			}
 			builder.AddByte(255);
 			builder.AddShort(character->PlayerID());
@@ -160,6 +168,7 @@ void Trade_Agree(Character *character, PacketReader &reader)
 				builder.AddInt(item.amount);
 				character->DelItem(item.id, item.amount);
 				character->trade_partner->AddItem(item.id, item.amount);
+				par2str += " " + util::to_string(item.id) + ":" + util::to_string(item.amount);
 			}
 			builder.AddByte(255);
 			character->Send(builder);
@@ -167,6 +176,8 @@ void Trade_Agree(Character *character, PacketReader &reader)
 
 			character->Emote(EMOTE_TRADE);
 			character->trade_partner->Emote(EMOTE_TRADE);
+
+			Console::Err("LOG TRADE ACCEPT [ %s / %s ] %s %s (%s <->%s )", timestr, std::string(character->player->client->GetRemoteAddr()).c_str(), character->SourceName().c_str(), character->trade_partner->SourceName().c_str(), par1str.c_str(), par2str.c_str());
 
 			character->trading = false;
 			character->trade_inventory.clear();
