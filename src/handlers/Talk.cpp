@@ -59,7 +59,7 @@ void Talk_Open(Character *character, PacketReader &reader)
 	std::string message = reader.GetEndString(); // message
 	limit_message(message, static_cast<int>(character->world->config["ChatLength"]));
 
-	Console::Err("CHAT %s", ("PARTY " + util::to_string(reinterpret_cast<int>(character->party)) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+	Console::Err("CHAT %s", ("PARTY " + util::to_string((int)reinterpret_cast<intptr_t>(character->party)) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
 	character->party->Msg(character, message, false);
 }
 
