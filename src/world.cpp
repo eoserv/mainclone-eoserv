@@ -234,6 +234,9 @@ void world_timed_save(void *world_void)
 {
 	World *world = static_cast<World *>(world_void);
 
+	if (!world->config["TimedSave"])
+		return;
+
 	UTIL_FOREACH(world->characters, character)
 	{
 		character->Save();
@@ -343,7 +346,6 @@ void World::UpdateConfig()
 		{
 			Console::Wrn("Database commit failed - no data was saved!");
 			this->db.Rollback();
-			this->BeginDB();
 		}
 	}
 }

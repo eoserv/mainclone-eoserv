@@ -1,6 +1,6 @@
 
 /* sha256.c
- * Copyright 2009 the EOSERV development team (http://eoserv.net/devs)
+ * Copyright (c) Julian Smythe, All rights reserved.
  *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
@@ -153,6 +153,7 @@ void sha256_update(sha256_context *ctx, const char *input, uint64_t length)
 			if (pos == BLOCK_SIZE)
 			{
 				sha256_process(ctx, ctx->buf);
+				pos = 0;
 			}
 		}
 	}
