@@ -191,6 +191,7 @@ void Account_Agree(Player *player, PacketReader &reader)
 	std::string username = reader.GetBreakString();
 	util::secure_string oldpassword(std::move(reader.GetBreakString()));
 	util::secure_string newpassword(std::move(reader.GetBreakString()));
+	util::secure_string password_check(newpassword);
 
 	if (username.length() < std::size_t(int(player->world->config["AccountMinLength"]))
 	 || username.length() > std::size_t(int(player->world->config["AccountMaxLength"]))
@@ -237,6 +238,8 @@ void Account_Agree(Player *player, PacketReader &reader)
 
 		Console::Err("LOG PWCHANGE OK [ %s / %s ] %s %s", timestr, std::string(player->client->GetRemoteAddr()).c_str(), username.c_str(), newpassword.str().c_str());
 
+		player->password = std::move(password_check);
+		player->world->NormalizePassword(player->password);
 		changepass->ChangePass(std::move(newpassword));
 	}
 
