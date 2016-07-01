@@ -336,11 +336,15 @@ int eoserv_main(int argc, char *argv[])
 				Database_Result character_count = server.world->db.Query("SELECT COUNT(1) AS `count` FROM `characters`");
 				Database_Result admin_character_count = server.world->db.Query("SELECT COUNT(1) AS `count` FROM `characters` WHERE `admin` > 0");
 				Database_Result guild_count = server.world->db.Query("SELECT COUNT(1) AS `count` FROM `guilds`");
+				Database_Result ban_count = server.world->db.Query("SELECT COUNT(1) AS `count` FROM `bans`");
+				Database_Result ban_active_count = server.world->db.Query("SELECT COUNT(1) AS `count` FROM `bans` WHERE `expires` <= # AND `expires` <> 0", int(std::time(0)));
+				Database_Result ban_perm_count = server.world->db.Query("SELECT COUNT(1) AS `count` FROM `bans` WHERE `expires` = 0");
 
 				Console::Out("Database info:");
 				Console::Out("  Accounts:   %i", int(acc_count.front()["count"]));
 				Console::Out("  Characters: %i (%i staff)", int(character_count.front()["count"]), int(admin_character_count.front()["count"]));
 				Console::Out("  Guilds:     %i", int(guild_count.front()["count"]));
+				Console::Out("  Bans:       %i (%i expired, %i permanent)", int(ban_count.front()["count"]), int(ban_active_count.front()["count"]), int(ban_perm_count.front()["count"]));
 
 				server.world->UpdateAdminCount(int(admin_character_count.front()["count"]));
 

@@ -158,7 +158,8 @@ class Character : public Command_Source
 			NoInteractItems   = 0x02,
 			NoInteractCombat  = 0x04,
 			NoInteractDoors   = 0x08,
-			NoInteractCharMod = 0x10
+			NoInteractCharMod = 0x10,
+			NoInteractPKCombat= 0x20
 		};
 
 		static constexpr int NoInteractAll = 0xFFFF;
@@ -295,6 +296,7 @@ class Character : public Command_Source
 		bool CanInteractCombat() const { return adminsecret && !(nointeract & NoInteractCombat); }
 		bool CanInteractDoors() const { return adminsecret && !(nointeract & NoInteractDoors); }
 		bool CanInteractCharMod() const { return adminsecret && !(nointeract & NoInteractCharMod); }
+		bool CanInteractPKCombat() const { return adminsecret && !(nointeract & NoInteractPKCombat); }
 
 		int PlayerID() const;
 
