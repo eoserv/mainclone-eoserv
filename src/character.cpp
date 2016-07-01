@@ -484,6 +484,7 @@ Character::Character(std::string name, World *world)
 	this->spell_id = 0;
 	this->spell_event = 0;
 	this->spell_target = TargetInvalid;
+	this->spell_fired_time = 0.0;
 
 	this->next_arena = 0;
 	this->arena = 0;
@@ -1000,6 +1001,8 @@ void Character::SpellAct()
 	unsigned short spell_target_id = this->spell_target_id;
 	this->CancelSpell();
 
+	this->spell_fired_time = Timer::GetTime();
+
 	switch (spell_target)
 	{
 		case TargetSelf:
@@ -1056,6 +1059,17 @@ void Character::SpellAct()
 
 		q.second->UsedSpell(spell_id);
 	}
+}
+
+double Character::SpellCooldownTime() const
+{
+	double cooldown_period = this->world->config["SpellCastCooldown"];
+	double cooldown = (this->spell_fired_time + cooldown_period) - Timer::GetTime();
+
+	if (cooldown < 0.0)
+		cooldown = 0.0;
+
+	return cooldown;
 }
 
 bool Character::Unequip(short item, unsigned char subloc)

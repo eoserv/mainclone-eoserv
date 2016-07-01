@@ -158,7 +158,8 @@ class Character : public Command_Source
 			NoInteractItems   = 0x02,
 			NoInteractCombat  = 0x04,
 			NoInteractDoors   = 0x08,
-			NoInteractCharMod = 0x10
+			NoInteractCharMod = 0x10,
+			NoInteractPKCombat= 0x20
 		};
 
 		static constexpr int NoInteractAll = 0xFFFF;
@@ -246,6 +247,7 @@ class Character : public Command_Source
 		TimeEvent *spell_event;
 		SpellTarget spell_target;
 		unsigned short spell_target_id;
+		double spell_fired_time;
 
 		double last_walk;
 		int attacks;
@@ -294,6 +296,7 @@ class Character : public Command_Source
 		bool CanInteractCombat() const { return adminsecret && !(nointeract & NoInteractCombat); }
 		bool CanInteractDoors() const { return adminsecret && !(nointeract & NoInteractDoors); }
 		bool CanInteractCharMod() const { return adminsecret && !(nointeract & NoInteractCharMod); }
+		bool CanInteractPKCombat() const { return adminsecret && !(nointeract & NoInteractPKCombat); }
 
 		int PlayerID() const;
 
@@ -325,6 +328,7 @@ class Character : public Command_Source
 		bool DelSpell(short spell);
 		void CancelSpell();
 		void SpellAct();
+		double SpellCooldownTime() const;
 		bool Unequip(short item, unsigned char subloc);
 		bool Equip(short item, unsigned char subloc);
 		bool InRange(unsigned char x, unsigned char y) const;
