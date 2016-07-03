@@ -36,6 +36,7 @@ void Login_Request(EOClient *client, PacketReader &reader)
 	std::string username = reader.GetBreakString();
 	util::secure_string password(std::move(reader.GetBreakString()));
 	std::string raw_password = password.str();
+	util::secure_string password_check(password);
 
 	if (username.length() > std::size_t(int(client->server()->world->config["AccountMaxLength"]))
 	 || password.str().length() > std::size_t(int(client->server()->world->config["PasswordMaxLength"])))
@@ -141,6 +142,8 @@ void Login_Request(EOClient *client, PacketReader &reader)
 
 	client->player->id = client->id;
 	client->player->client = client;
+	client->player->password = std::move(password_check);
+	client->server()->world->NormalizePassword(client->player->password);
 	client->state = EOClient::LoggedIn;
 
 	PacketBuilder reply(PACKET_LOGIN, PACKET_REPLY, 5 + client->player->characters.size() * 34);

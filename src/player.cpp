@@ -106,6 +106,11 @@ void Player::ChangePass(util::secure_string&& password)
 	this->world->db.Query("UPDATE `accounts` SET `password` = '$' WHERE username = '$'", password.str().c_str(), this->username.c_str());
 }
 
+void Player::LoginCleanup()
+{
+	this->password = "";
+}
+
 AdminLevel Player::Admin() const
 {
 	AdminLevel admin = ADMIN_PLAYER;

@@ -225,8 +225,9 @@ void Welcome_Msg(Player *player, PacketReader &reader)
 		}
 	}
 
+	bool insecure_pw = !player->world->IsPasswordSecure(player->password);
 	player->world->Login(player->character);
-
+	player->LoginCleanup();
 	player->client->state = EOClient::Playing;
 
 	std::vector<Character *> updatecharacters;
@@ -373,6 +374,16 @@ void Welcome_Msg(Player *player, PacketReader &reader)
 		reply.AddThree(item->amount);
 	}
 	player->Send(reply);
+
+	if (insecure_pw)
+	{
+		PacketBuilder warning(PACKET_MESSAGE, PACKET_ACCEPT, 36+74+42+56);
+		warning.AddBreakString("WARNING! Your password is insecure!");
+		warning.AddBreakString("Your password is either trivial to guess or on a list of known passwords.");
+		warning.AddBreakString("Please change your password in-game ASAP.");
+		warning.AddBreakString("Visit https://game.eoserv.net/pw_security for more info.");
+		player->Send(warning);
+	}
 }
 
 // Client wants a file

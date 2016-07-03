@@ -25,6 +25,10 @@ struct secure_string
 		std::string str_;
 
 	public:
+		secure_string()
+			: str_()
+		{ }
+		
 		secure_string(std::string&& s)
 			: str_(s)
 		{
@@ -69,7 +73,7 @@ struct secure_string
 		}
 
 		/// Make sure nothing copies or mutates this string!
-		const std::string& str()
+		const std::string& str() const
 		{
 			return this->str_;
 		}

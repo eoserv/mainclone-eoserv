@@ -29,6 +29,7 @@ class Player
 		bool online;
 		unsigned int id;
 		std::string username;
+		util::secure_string password;
 		bool banned;
 
 		std::string dutylast;
@@ -41,6 +42,8 @@ class Player
 		static bool ValidName(std::string username);
 		bool AddCharacter(std::string name, Gender gender, int hairstyle, int haircolor, Skin race);
 		void ChangePass(util::secure_string&& password);
+
+		void LoginCleanup();
 
 		AdminLevel Admin() const;
 

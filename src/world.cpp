@@ -36,6 +36,7 @@
 #include <array>
 #include <cmath>
 #include <ctime>
+#include <cstring>
 #include <limits>
 #include <list>
 #include <memory>
@@ -288,6 +289,139 @@ void world_quakes(void *world_void)
 		if (map->exists)
 			map->TimedQuakes();
 	}
+}
+
+void World::NormalizePassword(std::string& s)
+{
+	auto pw_isnum = [](char c){ return c >= '0' && c <= '9'; };
+	auto pw_islower = [](char c){ return c >= 'a' && c <= 'z'; };
+	auto pw_isupper = [](char c){ return c >= 'A' && c <= 'Z'; };
+	auto pw_isalpha = [&pw_islower, &pw_isupper](char c){ return pw_islower(c) || pw_isupper(c); };
+	auto pw_tolower = [&pw_isupper](char c){ if (pw_isupper(c)) { return char(c - 'A' + 'a'); } else { return c; } };
+	auto pw_suffix = [](char a, char b, char c){ return ((a << 16) + (b << 8) + c); };
+
+	std::size_t len = s.length();
+
+	if (len < 6)
+	{
+		std::fill(s.begin() + len, s.end(), '\0');
+		s.resize(0);
+		s = "@short";
+		return;
+	}
+
+	// foobar1995, foobar2020 -> foobar
+	long suffix = (len >= 4 ? pw_suffix(s[len - 4], s[len - 3], 0) : 0);
+	if (len >= 4 && (
+		   suffix == pw_suffix('1', '9', 0)
+		|| suffix == pw_suffix('2', '0', 0)
+	) && pw_isnum(s[len - 2]) && pw_isnum(s[len - 1]))
+	{
+		len -= 4;
+	}
+
+	// foobar420, foobar007 -> foobar
+	suffix = (len >= 3 ? pw_suffix(s[len - 3], s[len - 2], s[len - 1]) : 0);
+	if (len >= 3 && (
+		   suffix == pw_suffix('0', '0', '7')
+		|| suffix == pw_suffix('4', '2', '0')
+	))
+	{
+		len -= 3;
+	}
+
+	// foobar111, foobar222, ... -> foobar
+	if (len >= 3 && (s[len - 3] == s[len - 2]) && (s[len - 2] == s[len - 1]))
+		len -= 3;
+
+	// foobar123, ... -> foobar
+	else if (len >= 3 && (s[len - 3] == (s[len - 2] + 1)) && (s[len - 2] == (s[len - 1] + 1)))
+		len -= 3;
+
+	// foobar321, ... -> foobar
+	else if (len >= 3 && (s[len - 3] == (s[len - 2] - 1)) && (s[len - 2] == (s[len - 1] - 1)))
+		len -= 3;
+
+	// foobar69 -> foobar
+	else if (len >= 2 && pw_isnum(s[len - 1]) && pw_isnum(s[len - 2]))
+		len -= 2;
+
+	// 1foobar -> foobar
+	if (len >= 1 && pw_isnum(s[0]))
+	{
+		std::memmove(&s[0], &s[1], len-1);
+		len -= 1;
+	}
+
+	// Foobar -> foobar
+	if (len >= 1 && pw_isupper(s[0]))
+		s[0] = pw_tolower(s[0]);
+
+	// FOOBAR -> foobar
+	bool all_upper = (len > 0);
+	for (size_t i = 0; i < len; ++i)
+	{
+		if (pw_islower(s[i]))
+			all_upper = false;
+	}
+
+	if (all_upper)
+	{
+		for (size_t i = 0; i < len; ++i)
+			s[i] = pw_tolower(s[i]);
+	}
+
+	// aaaaaa -> @repeating
+	bool repeating = (len > 0);
+	char repeat_c = (len > 0) ? s[0] : 0;
+
+	for (size_t i = 1; i < len; ++i)
+	{
+		if (s[i] != repeat_c)
+			repeating = false;
+	}
+
+	// abcdef, 654321 -> @sequential
+	bool sequential = (len > 0);
+	char sequential_c = (len > 0) ? s[0] : 0;
+
+	for (size_t i = 1; i < len; ++i)
+	{
+		if (s[i] == (sequential_c + 1))
+		{
+			sequential_c = (sequential_c + 1);
+		}
+		else if (s[i] == (sequential_c - 1))
+		{
+			sequential_c = (sequential_c - 1);
+		}
+		else
+		{
+			sequential = false;
+		}
+	}
+
+	if (repeating || sequential)
+		len = 0;
+
+	std::fill(s.begin() + len, s.begin() + s.length(), '\0');
+	s.resize(len);
+
+	     if (repeating)  s = "@repeating";
+	else if (sequential) s = "@sequential";
+	else if (len == 0)   s = "@empty";
+}
+
+void World::NormalizePassword(util::secure_string& ss)
+{
+	std::string s = ss.str();
+
+	this->NormalizePassword(s);
+
+	ss = std::move(s);
+
+	std::fill(UTIL_RANGE(s), '\0');
+	s.erase();
 }
 
 void World::UpdateConfig()
@@ -1469,6 +1603,11 @@ int World::CheckBan(const std::string *username, const IPAddress *address, const
 	Database_Result res = db.Query((query.substr(0, query.length()-4) + ") AND (expires > # OR expires = 0)").c_str(), int(std::time(0)));
 
 	return static_cast<int>(res[0]["expires"]);
+}
+
+bool World::IsPasswordSecure(const util::secure_string& password) const
+{
+	return (this->insecure_passwords.find(password.str()) == this->insecure_passwords.end());
 }
 
 static std::list<int> PKExceptUnserialize(std::string serialized)

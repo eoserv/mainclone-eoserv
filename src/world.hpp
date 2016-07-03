@@ -33,6 +33,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 struct Board_Post
@@ -115,6 +116,8 @@ class World
 		std::array<int, 254> exp_table;
 		std::vector<int> instrument_ids;
 
+		std::unordered_set<std::string> insecure_passwords;
+
 		int admin_count;
 
 		World(std::array<std::string, 6> dbinfo, const Config &eoserv_config, const Config &admin_config);
@@ -157,6 +160,9 @@ class World
 		void Mute(Command_Source *from, Character *victim, bool announce = true);
 
 		int CheckBan(const std::string *username, const IPAddress *address, const int *hdid);
+		bool IsPasswordSecure(const util::secure_string& password) const;
+		void NormalizePassword(std::string& s);
+		void NormalizePassword(util::secure_string& ss);
 
 		Character *GetCharacter(std::string name);
 		Character *GetCharacterReal(std::string real_name);
