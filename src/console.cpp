@@ -98,11 +98,12 @@ void Wrn(const char* f, ...)
 
 void Err(const char* f, ...)
 {
+/*
 	if (!Styled[STREAM_ERR])
 	{
 		CONSOLE_GENERIC_OUT("ERR", STREAM_OUT, COLOR_RED, true);
 	}
-
+*/
 	CONSOLE_GENERIC_OUT("ERR", STREAM_ERR, COLOR_RED, true);
 }
 
