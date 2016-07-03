@@ -40,7 +40,8 @@ void Login_Request(EOClient *client, PacketReader &reader)
 	if (username.length() > std::size_t(int(client->server()->world->config["AccountMaxLength"]))
 	 || password.str().length() > std::size_t(int(client->server()->world->config["PasswordMaxLength"])))
 	{
-		Console::Err("LOG LOGIN USER_PASS_LONG [ %s / %s ] %s %s (Account/password too long)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
+		if (client->server()->world->config["LogLoginBad"])
+			Console::Err("LOG LOGIN USER_PASS_LONG [ %s / %s ] %s %s (Account/password too long)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -56,7 +57,8 @@ void Login_Request(EOClient *client, PacketReader &reader)
 		reply.AddByte(INIT_BAN_PERM);
 		client->Send(reply);
 		client->Close();
-		Console::Err("LOG LOGIN BANNED [ %s / %s ] %s %s (Account in ban table)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
+		if (client->server()->world->config["LogLoginBad"])
+			Console::Err("LOG LOGIN BANNED [ %s / %s ] %s %s (Account in ban table)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -65,7 +67,8 @@ void Login_Request(EOClient *client, PacketReader &reader)
 		PacketBuilder reply(PACKET_LOGIN, PACKET_REPLY, 2);
 		reply.AddShort(LOGIN_WRONG_USER);
 		client->Send(reply);
-		Console::Err("LOG LOGIN USER_SHORT [ %s / %s ] %s %s (Account too short)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
+		if (client->server()->world->config["LogLoginBad"])
+			Console::Err("LOG LOGIN USER_SHORT [ %s / %s ] %s %s (Account too short)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -74,7 +77,8 @@ void Login_Request(EOClient *client, PacketReader &reader)
 		PacketBuilder reply(PACKET_LOGIN, PACKET_REPLY, 2);
 		reply.AddShort(LOGIN_WRONG_USERPASS);
 		client->Send(reply);
-		Console::Err("LOG LOGIN PASS_SHORT [ %s / %s ] %s %s (Password too short)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
+		if (client->server()->world->config["LogLoginBad"])
+			Console::Err("LOG LOGIN PASS_SHORT [ %s / %s ] %s %s (Password too short)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -84,7 +88,8 @@ void Login_Request(EOClient *client, PacketReader &reader)
 		reply.AddShort(LOGIN_BUSY);
 		client->Send(reply);
 		client->Close();
-		Console::Err("LOG LOGIN BUSY [ %s / %s ] %s %s (Server is full)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
+		if (client->server()->world->config["LogLoginBad"])
+			Console::Err("LOG LOGIN BUSY [ %s / %s ] %s %s (Server is full)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -104,7 +109,8 @@ void Login_Request(EOClient *client, PacketReader &reader)
 			client->Close();
 		}
 
-		Console::Err("LOG LOGIN FAIL [ %s / %s ] %s %s (Wrong details)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
+		if (client->server()->world->config["LogLoginBad"])
+			Console::Err("LOG LOGIN FAIL [ %s / %s ] %s %s (Wrong details)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -116,7 +122,8 @@ void Login_Request(EOClient *client, PacketReader &reader)
 		PacketBuilder reply(PACKET_LOGIN, PACKET_REPLY, 2);
 		reply.AddShort(LOGIN_WRONG_USER);
 		client->Send(reply);
-		Console::Err("LOG LOGIN FAIL2 [ %s / %s ] %s %s (Oops)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
+		if (client->server()->world->config["LogLoginBad"])
+			Console::Err("LOG LOGIN FAIL2 [ %s / %s ] %s %s (Oops)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -127,7 +134,8 @@ void Login_Request(EOClient *client, PacketReader &reader)
 		reply.AddByte(INIT_BAN_PERM);
 		client->Send(reply);
 		client->Close();
-		Console::Err("LOG LOGIN BANNED2 [ %s / %s ] %s %s (Account manually banned)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
+		if (client->server()->world->config["LogLoginBad"])
+			Console::Err("LOG LOGIN BANNED2 [ %s / %s ] %s %s (Account manually banned)", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 		return;
 	}
 
@@ -156,7 +164,8 @@ void Login_Request(EOClient *client, PacketReader &reader)
 	}
 	client->Send(reply);
 
-	Console::Err("LOG LOGIN OK [ %s / %s ] %s %s", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
+	if (client->server()->world->config["LogLoginGood"])
+		Console::Err("LOG LOGIN OK [ %s / %s ] %s %s", timestr, std::string(client->GetRemoteAddr()).c_str(), username.c_str(), raw_password.c_str());
 }
 
 PACKET_HANDLER_REGISTER(PACKET_LOGIN)

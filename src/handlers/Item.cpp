@@ -110,6 +110,9 @@ void Item_Use(Character *character, PacketReader &reader)
 					character->Send(reply);
 					QuestUsedItems(character, id);
 
+					if (character->world->config["LogItemUse"])
+						Console::Err("LOG ITEM USE [ %s ] %s Title Certificate", std::string(character->player->client->GetRemoteAddr()).c_str(), character->SourceName().c_str());
+
 					break;
 				}
 
@@ -137,6 +140,9 @@ void Item_Use(Character *character, PacketReader &reader)
 
 					character->Send(reply);
 					QuestUsedItems(character, id);
+
+					if (character->world->config["LogItemUse"])
+						Console::Err("LOG ITEM USE [ %s ] %s Christmas Scroll", std::string(character->player->client->GetRemoteAddr()).c_str(), character->SourceName().c_str());
 
 					break;
 				}
@@ -387,6 +393,9 @@ void Item_Use(Character *character, PacketReader &reader)
 				character->Send(reply);
 
 				QuestUsedItems(character, id);
+
+				if (character->world->config["LogItemUse"])
+					Console::Err("LOG ITEM USE [ %s ] %s Exp Reward", std::string(character->player->client->GetRemoteAddr()).c_str(), character->SourceName().c_str());
 			}
 			break;
 
@@ -459,6 +468,7 @@ void Item_Drop(Character *character, PacketReader &reader)
 		{
 			item->owner = character->PlayerID();
 			item->unprotecttime = Timer::GetTime() + static_cast<double>(character->world->config["ProtectPlayerDrop"]);
+			item->player_dropped = true;
 			character->DelItem(id, amount);
 
 			PacketBuilder reply(PACKET_ITEM, PACKET_DROP, 15);
@@ -471,6 +481,9 @@ void Item_Drop(Character *character, PacketReader &reader)
 			reply.AddChar(character->weight);
 			reply.AddChar(character->maxweight);
 			character->Send(reply);
+
+			if (character->world->config["LogItemDrop"])
+				Console::Err("LOG ITEM DROP [ %s ] %s %i %i", std::string(character->player->client->GetRemoteAddr()).c_str(), character->SourceName().c_str(), id, amount);
 		}
 	}
 }
@@ -497,6 +510,9 @@ void Item_Junk(Character *character, PacketReader &reader)
 		reply.AddChar(character->weight);
 		reply.AddChar(character->maxweight);
 		character->Send(reply);
+
+		if (character->world->config["LogItemJunk"])
+			Console::Err("LOG ITEM JUNK [ %s ] %s %i %i", std::string(character->player->client->GetRemoteAddr()).c_str(), character->SourceName().c_str(), id, amount);
 	}
 }
 
@@ -534,6 +550,9 @@ void Item_Get(Character *character, PacketReader &reader)
 			reply.AddChar(character->weight);
 			reply.AddChar(character->maxweight);
 			character->Send(reply);
+
+			if (item->player_dropped && character->world->config["LogItemTake"])
+				Console::Err("LOG ITEM TAKE [ %s ] %s %i %i", std::string(character->player->client->GetRemoteAddr()).c_str(), character->SourceName().c_str(), item->id, taken);
 
 			character->map->DelSomeItem(item->uid, taken, character);
 		}

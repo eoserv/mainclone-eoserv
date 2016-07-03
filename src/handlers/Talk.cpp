@@ -46,7 +46,8 @@ void Talk_Request(Character *character, PacketReader &reader)
 	std::string message = reader.GetEndString(); // message
 	limit_message(message, static_cast<int>(character->world->config["ChatLength"]));
 
-	Console::Err("CHAT %s", ("GUILD " + character->guild->tag + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+	if (character->world->config["LogChatGuild"])
+		Console::Err("CHAT %s", ("GUILD " + character->guild->tag + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
 	character->guild->Msg(character, message, false);
 }
 
@@ -59,7 +60,8 @@ void Talk_Open(Character *character, PacketReader &reader)
 	std::string message = reader.GetEndString(); // message
 	limit_message(message, static_cast<int>(character->world->config["ChatLength"]));
 
-	Console::Err("CHAT %s", ("PARTY " + util::to_string(reinterpret_cast<int>(character->party)) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+	if (character->world->config["LogChatParty"])
+		Console::Err("CHAT %s", ("PARTY " + util::to_string((int)reinterpret_cast<intptr_t>(character->party)) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
 	character->party->Msg(character, message, false);
 }
 
@@ -82,7 +84,8 @@ void Talk_Msg(Character *character, PacketReader &reader)
 	std::string message = reader.GetEndString();
 	limit_message(message, static_cast<int>(character->world->config["ChatLength"]));
 
-	Console::Err("CHAT %s", ("GLOBAL " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+	if (character->world->config["LogChatGlobal"])
+		Console::Err("CHAT %s", ("GLOBAL " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
 	character->world->Msg(character, message, false);
 }
 
@@ -116,7 +119,8 @@ void Talk_Tell(Character *character, PacketReader &reader)
 		}
 		else
 		{
-			Console::Err("CHAT %s", ("PRIV " + util::ucfirst(to->SourceName()) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+			if (character->world->config["LogChatPrivate"])
+				Console::Err("CHAT %s", ("PRIV " + util::ucfirst(to->SourceName()) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
 			character->Msg(to, character->world->i18n.Format("whisper_blocked", to->SourceName()));
 		}
 	}
@@ -171,6 +175,9 @@ void Talk_Report(Character *character, PacketReader &reader)
 	}
 	else
 	{
+		if (character->world->config["LogChatPublic"])
+			Console::Err("CHAT %s", ("PUBLIC " + util::to_string(character->mapid) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+
 		character->map->Msg(character, message, false);
 	}
 }
@@ -184,7 +191,8 @@ void Talk_Admin(Character *character, PacketReader &reader)
 	std::string message = reader.GetEndString(); // message
 	limit_message(message, static_cast<int>(character->world->config["ChatLength"]));
 
-	Console::Err("CHAT %s", ("ADMIN " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+	if (character->world->config["LogChatAdmin"])
+		Console::Err("CHAT %s", ("ADMIN " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
 	character->world->AdminMsg(character, message, ADMIN_GUARDIAN, false);
 }
 
@@ -197,7 +205,8 @@ void Talk_Announce(Character *character, PacketReader &reader)
 	std::string message = reader.GetEndString(); // message
 	limit_message(message, static_cast<int>(character->world->config["ChatLength"]));
 
-	Console::Err("CHAT %s", ("ANNOUNCE " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+	if (character->world->config["LogChatAnnounce"])
+		Console::Err("CHAT %s", ("ANNOUNCE " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
 	character->world->AnnounceMsg(character, message, false);
 }
 
