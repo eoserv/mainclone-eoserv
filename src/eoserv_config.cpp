@@ -283,6 +283,8 @@ void eoserv_config_validate_config(Config& config)
 	eoserv_config_default(config, "LogChatPublic"      , false);
 	eoserv_config_default(config, "LogChatAdmin"       , false);
 	eoserv_config_default(config, "LogChatAnnounce"    , false);
+
+	eoserv_config_default(config, "CheckNormalizePasswords", false);
 }
 
 void eoserv_config_validate_admin(Config& config)

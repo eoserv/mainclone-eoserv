@@ -348,6 +348,31 @@ void World::UpdateConfig()
 			this->db.Rollback();
 		}
 	}
+
+	try
+	{
+		this->insecure_passwords.clear();
+
+		Database_Result res = this->db.Query("SELECT `password` FROM `insecure_passwords`");
+
+		UTIL_FOREACH_REF(res, row)
+		{
+			std::string password = row["password"];
+			this->insecure_passwords.insert(password);
+
+			if (this->config["CheckNormalizePasswords"])
+			{
+				this->NormalizePassword(password);
+				this->insecure_passwords.insert(password);
+			}
+		}
+
+		Console::Out("%d insecure passwords loaded.", this->insecure_passwords.size());
+	}
+	catch (Database_QueryFailed& e)
+	{
+		Console::Err("Failed to load insecure passwords list");
+	}
 }
 
 World::World(std::array<std::string, 6> dbinfo, const Config &eoserv_config, const Config &admin_config)
