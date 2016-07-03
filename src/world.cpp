@@ -493,8 +493,12 @@ void World::UpdateConfig()
 		{
 			std::string password = row["password"];
 			this->insecure_passwords.insert(password);
-			this->NormalizePassword(password);
-			this->insecure_passwords.insert(password);
+
+			if (this->config["CheckNormalizePasswords"])
+			{
+				this->NormalizePassword(password);
+				this->insecure_passwords.insert(password);
+			}
 		}
 
 		Console::Out("%d insecure passwords loaded.", this->insecure_passwords.size());
