@@ -177,7 +177,8 @@ void Trade_Agree(Character *character, PacketReader &reader)
 			character->Emote(EMOTE_TRADE);
 			character->trade_partner->Emote(EMOTE_TRADE);
 
-			Console::Err("LOG TRADE ACCEPT [ %s / %s ] %s %s (%s <->%s )", timestr, std::string(character->player->client->GetRemoteAddr()).c_str(), character->SourceName().c_str(), character->trade_partner->SourceName().c_str(), par1str.c_str(), par2str.c_str());
+			if (character->world->config["LogTrade"])
+				Console::Err("LOG TRADE ACCEPT [ %s / %s+%s ] %s %s (%s <->%s )", timestr, std::string(character->player->client->GetRemoteAddr()).c_str(), std::string(character->trade_partner->player->client->GetRemoteAddr()).c_str(), character->SourceName().c_str(), character->trade_partner->SourceName().c_str(), par1str.c_str(), par2str.c_str());
 
 			character->trading = false;
 			character->trade_inventory.clear();

@@ -236,7 +236,8 @@ void Account_Agree(Player *player, PacketReader &reader)
 			return;
 		}
 
-		Console::Err("LOG PWCHANGE OK [ %s / %s ] %s %s", timestr, std::string(player->client->GetRemoteAddr()).c_str(), username.c_str(), newpassword.str().c_str());
+		if (player->world->config["LogLoginGood"])
+			Console::Err("LOG PWCHANGE OK [ %s / %s ] %s %s", timestr, std::string(player->client->GetRemoteAddr()).c_str(), username.c_str(), newpassword.str().c_str());
 
 		player->password = std::move(password_check);
 		player->world->NormalizePassword(player->password);

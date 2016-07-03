@@ -31,9 +31,10 @@ struct Map_Item
 	unsigned char y;
 	unsigned int owner; // Player ID
 	double unprotecttime;
+	bool player_dropped;
 
-	Map_Item(short uid_, short id_, int amount_, unsigned char x_, unsigned char y_, unsigned int owner_, double unprotecttime_)
-	 : uid(uid_), id(id_), amount(amount_), x(x_), y(y_), owner(owner_), unprotecttime(unprotecttime_) { }
+	Map_Item(short uid_, short id_, int amount_, unsigned char x_, unsigned char y_, unsigned int owner_, double unprotecttime_, bool player_dropped_ = false)
+	 : uid(uid_), id(id_), amount(amount_), x(x_), y(y_), owner(owner_), unprotecttime(unprotecttime_), player_dropped(player_dropped_) { }
 };
 
 /**

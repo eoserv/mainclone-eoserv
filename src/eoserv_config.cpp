@@ -268,6 +268,21 @@ void eoserv_config_validate_config(Config& config)
 	eoserv_config_default(config, "MaxTile"            , 8);
 	eoserv_config_default(config, "MaxMap"             , 400);
 	eoserv_config_default(config, "MaxTrade"           , 2000000000);
+
+	eoserv_config_default(config, "LogLoginBad"        , false);
+	eoserv_config_default(config, "LogLoginGood"       , false);
+	eoserv_config_default(config, "LogItemUse"         , false);
+	eoserv_config_default(config, "LogItemDrop"        , false);
+	eoserv_config_default(config, "LogItemJunk"        , false);
+	eoserv_config_default(config, "LogItemTake"        , false);
+	eoserv_config_default(config, "LogTrade"           , false);
+	eoserv_config_default(config, "LogChatGuild"       , false);
+	eoserv_config_default(config, "LogChatParty"       , false);
+	eoserv_config_default(config, "LogChatGlobal"      , false);
+	eoserv_config_default(config, "LogChatPrivate"     , false);
+	eoserv_config_default(config, "LogChatPublic"      , false);
+	eoserv_config_default(config, "LogChatAdmin"       , false);
+	eoserv_config_default(config, "LogChatAnnounce"    , false);
 }
 
 void eoserv_config_validate_admin(Config& config)
