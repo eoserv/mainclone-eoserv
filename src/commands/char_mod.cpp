@@ -97,10 +97,10 @@ void SetX(const std::vector<std::string>& arguments, Command_Source* from, std::
 				from->ServerMsg(from->SourceWorld()->i18n.Format("command_access_denied"));
 			}
 		}
-		else if (set == "title") victim->title = util::implode(" ", arguments.begin() + 1, arguments.end());
-		else if (set == "fiance") victim->fiance = (arguments.size() > 1) ? arguments[1] : "";
-		else if (set == "partner") victim->partner = (arguments.size() > 1) ? arguments[1] : "";
-		else if (set == "home") victim->home = (arguments.size() > 1) ? arguments[1] : "";
+		else if (set == "title") victim->title = (util::implode(" ", arguments.begin() + 1, arguments.end())).substr(0,32);
+		else if (set == "fiance") victim->fiance = ((arguments.size() > 1) ? arguments[1] : "").substr(0,16);
+		else if (set == "partner") victim->partner = ((arguments.size() > 1) ? arguments[1] : "").substr(0,16);
+		else if (set == "home") victim->home = ((arguments.size() > 1) ? arguments[1] : "").substr(0,32);
 		else if (set == "gender") (appearance = true, victim->gender) = Gender(std::min(std::max(util::to_int(arguments[1]), 0), 1));
 		else if (set == "hairstyle") (appearance = true, victim->hairstyle) = std::min(std::max(util::to_int(arguments[1]), 0), int(from->SourceWorld()->config["MaxHairStyle"]));
 		else if (set == "haircolor") (appearance = true, victim->haircolor) = std::min(std::max(util::to_int(arguments[1]), 0), int(from->SourceWorld()->config["MaxHairColor"]));

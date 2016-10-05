@@ -189,7 +189,7 @@ void Guild_Agree(Character *character, PacketReader &reader)
 
 						for (std::size_t i = 0; i < character->guild->ranks.size(); ++i)
 						{
-							new_ranks[i] = reader.GetBreakString();
+							new_ranks[i] = reader.GetBreakString().substr(0,16);
 
 							if (!character->world->guildmanager->ValidRank(new_ranks[i]))
 								return;
