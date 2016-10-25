@@ -346,7 +346,7 @@ Map::Map(int id, World *world)
 
 	this->LoadArena();
 
-	this->Load();
+	this->Load(this->MakeFilename());
 
 	if (!this->chests.empty())
 	{
@@ -440,19 +440,12 @@ void Map::LoadArena()
 	}
 }
 
-bool Map::Load()
+bool Map::Load(const std::string& filename, int loadflags)
 {
-	char namebuf[6];
-
 	if (this->id < 0)
 	{
 		return false;
 	}
-
-	std::string filename = this->world->config["MapDir"];
-	std::sprintf(namebuf, "%05i", this->id);
-	filename.append(namebuf);
-	filename.append(".emf");
 
 	map_safe_fail_filename = filename.c_str();
 
@@ -461,6 +454,8 @@ bool Map::Load()
 	if (!fh)
 		return false;
 
+	this->filename = filename;
+	
 	this->has_timed_spikes = false;
 
 	SAFE_SEEK(fh, 0x03, SEEK_SET);
@@ -613,10 +608,13 @@ bool Map::Load()
 				continue;
 			}
 
-			NPC *newnpc = new NPC(this, npc_id, x, y, spawntype, spawntime, index++);
-			this->npcs.push_back(newnpc);
+			if (!(loadflags & LoadIgnoreNPC))
+			{
+				NPC *newnpc = new NPC(this, npc_id, x, y, spawntype, spawntime, index++);
+				this->npcs.push_back(newnpc);
 
-			newnpc->Spawn();
+				newnpc->Spawn();
+			}
 		}
 	}
 
@@ -676,23 +674,23 @@ bool Map::Load()
 	return true;
 }
 
-void Map::Unload()
+void Map::Unload(int unloadflags)
 {
 	this->exists = false;
 
-	UTIL_FOREACH(this->npcs, npc)
+	if (!(unloadflags & UnloadIgnoreNPC))
 	{
-		UTIL_FOREACH_CREF(npc->damagelist, opponent)
+		UTIL_FOREACH(this->npcs, npc)
 		{
-			opponent->attacker->unregister_npc.erase(
-				std::remove(UTIL_RANGE(opponent->attacker->unregister_npc), npc),
-				opponent->attacker->unregister_npc.end()
-			);
+			UTIL_FOREACH_CREF(npc->damagelist, opponent)
+			{
+				opponent->attacker->UnregisterNPC(npc);
+			}
 		}
+
+		this->npcs.clear();
 	}
-
-	this->npcs.clear();
-
+	
 	if (this->arena)
 	{
 		UTIL_FOREACH(this->arena->spawns, spawn)
@@ -743,6 +741,20 @@ void Map::Enter(Character *character, WarpAnimation animation)
 	character->map = this;
 	character->last_walk = Timer::GetTime();
 	character->attacks = 0;
+	
+	character->hw2016_chests = 0;
+	
+	if (character->world->hw2016_state == 21 && this->id == 288)
+	{
+		character->world->hw2016_state = 30;
+		character->world->hw2016_tick = -5;
+	}
+	
+	if (this->id == 286)
+	{
+		character->hw2016_points = 0;
+	}
+	
 	character->CancelSpell();
 
 	PacketBuilder builder(PACKET_PLAYERS, PACKET_AGREE, 63);
@@ -1215,13 +1227,27 @@ Map::WalkResult Map::Walk(Character *from, Direction direction, bool admin)
 		{
 			from->DeathRespawn();
 			return WalkWarped;
-		}	
+		}
+	}
+	
+	// Halloween 2016 event hallway trigger
+	if (this->id == 287 && this->world->hw2016_state >= 20 && this->world->hw2016_state < 30)
+	{
+		Console::Dbg("world->hw2016_hallway_spawnrow = %d", world->hw2016_hallway_spawnrow);
+		Console::Dbg("target_y = %d", target_y);
+		Console::Dbg("target_y must be %d", world->hw2016_hallway_spawnrow + 1);
+		if (world->hw2016_hallway_spawnrow > 42 && target_y == world->hw2016_hallway_spawnrow + 1)
+		{
+			Console::Dbg("We're doing it manual!");
+			world->hw2016_hallway_spawnrow -= 4;
+			world->hw2016_spawn_hallway_row(world->hw2016_hallway_spawnrow);
+		}
 	}
 
 	return WalkOK;
 }
 
-Map::WalkResult Map::Walk(NPC *from, Direction direction)
+Map::WalkResult Map::Walk(NPC *from, Direction direction, bool playerghost)
 {
 	int seedistance = this->world->config["SeeDistance"];
 
@@ -1273,7 +1299,7 @@ Map::WalkResult Map::Walk(NPC *from, Direction direction)
 
 	bool adminghost = (from->ENF().type == ENF::Aggressive || from->parent);
 
-	if (!this->Walkable(target_x, target_y, true) || this->Occupied(target_x, target_y, Map::PlayerAndNPC, adminghost))
+	if (!this->Walkable(target_x, target_y, true) || this->Occupied(target_x, target_y, playerghost ? Map::PlayerAndNPC : Map::NPCOnly, adminghost))
 	{
 		return WalkFail;
 	}
@@ -1502,29 +1528,61 @@ void Map::Attack(Character *from, Direction direction)
 			{
 				int amount = util::rand(from->mindam, from->maxdam);
 				double rand = util::rand(0.0, 1.0);
-				// Checks if target is facing you
-				bool critical = std::abs(int(npc->direction) - from->direction) != 2 || rand < static_cast<double>(this->world->config["CriticalRate"]);
 
-				if (this->world->config["CriticalFirstHit"] && npc->hp == npc->ENF().hp)
-					critical = true;
-
-				std::unordered_map<std::string, double> formula_vars;
-
-				from->FormulaVars(formula_vars);
-				npc->FormulaVars(formula_vars, "target_");
-				formula_vars["modifier"] = this->world->config["MobRate"];
-				formula_vars["damage"] = amount;
-				formula_vars["critical"] = critical;
-
-				amount = rpn_eval(rpn_parse(this->world->formulas_config["damage"]), formula_vars);
-				double hit_rate = rpn_eval(rpn_parse(this->world->formulas_config["hit_rate"]), formula_vars);
-
-				if (rand > hit_rate)
+				// Halloween 2016 NPC damage formula
+				if (npc->id >= 329 && npc->id <= 349)
 				{
-					amount = 0;
-				}
+					amount = util::rand(90 + from->hw2016_points / 2, static_cast<int>(110 + from->hw2016_points * 2 * this->world->hw2016_monstermod)); // TODO: completion boosts?
+					double rand = util::rand(0.0, 1.0);
+					double hit_rate = ((100.0 - npc->ENF().evade) / 100.0);
+					
+					amount = amount * ((100.0 - npc->ENF().armor) / 100.0); // TODO: Apply shields and skulls
+					
+					amount = std::max(amount, 1);
 
-				amount = std::max(amount, 0);
+					if (rand > hit_rate)
+					{
+						amount = 0;
+					}
+				}
+				else if (npc->id == 350) // Halloween 2016 chest
+				{
+					if (from->hw2016_chests > 0)
+					{
+						amount = 1;
+						--from->hw2016_chests;
+					}
+					else
+					{
+						amount = 0;
+					}
+				}
+				else
+				{
+					// Checks if target is facing you
+					bool critical = std::abs(int(npc->direction) - from->direction) != 2 || rand < static_cast<double>(this->world->config["CriticalRate"]);
+
+					if (this->world->config["CriticalFirstHit"] && npc->hp == npc->ENF().hp)
+						critical = true;
+
+					std::unordered_map<std::string, double> formula_vars;
+
+					from->FormulaVars(formula_vars);
+					npc->FormulaVars(formula_vars, "target_");
+					formula_vars["modifier"] = this->world->config["MobRate"];
+					formula_vars["damage"] = amount;
+					formula_vars["critical"] = critical;
+
+					amount = rpn_eval(rpn_parse(this->world->formulas_config["damage"]), formula_vars);
+					double hit_rate = rpn_eval(rpn_parse(this->world->formulas_config["hit_rate"]), formula_vars);
+
+					if (rand > hit_rate)
+					{
+						amount = 0;
+					}
+
+					amount = std::max(amount, 0);
+				}
 
 				int limitamount = std::min(amount, int(npc->hp));
 
@@ -1877,9 +1935,17 @@ void Map::SpellSelf(Character *from, unsigned short spell_id)
 	if (!spell || spell.type != ESF::Heal || from->tp < spell.tp)
 		return;
 
-	from->tp -= spell.tp;
-
+	int tploss = spell.tp;
 	int hpgain = spell.hp;
+	
+	// Halloween 2016 healing spell scaling
+	if (from->mapid >= 286 && from->mapid <= 289)
+	{
+		hpgain = std::max<int>(from->maxhp * (spell.hp / 100.0), 1);
+		tploss = std::max<int>(from->maxtp * (spell.tp / 100.0), 1);
+	}
+	
+	from->tp -= tploss;
 
 	if (this->world->config["LimitDamage"])
 		hpgain = std::min(hpgain, from->maxhp - from->hp);
@@ -1909,7 +1975,7 @@ void Map::SpellSelf(Character *from, unsigned short spell_id)
 	from->Send(builder);
 }
 
-void Map::SpellAttack(Character *from, NPC *npc, unsigned short spell_id)
+void Map::SpellAttack(Character *from, NPC *victim, unsigned short spell_id)
 {
 	if (!from->CanInteractCombat())
 		return;
@@ -1919,42 +1985,73 @@ void Map::SpellAttack(Character *from, NPC *npc, unsigned short spell_id)
 	if (!spell || spell.type != ESF::Damage || from->tp < spell.tp)
 		return;
 
-	if ((npc->ENF().type == ENF::Passive || npc->ENF().type == ENF::Aggressive) && npc->alive)
+	if ((victim->ENF().type == ENF::Passive || victim->ENF().type == ENF::Aggressive) && victim->alive)
 	{
 		from->tp -= spell.tp;
 
 		int amount = util::rand(from->mindam + spell.mindam, from->maxdam + spell.maxdam);
 		double rand = util::rand(0.0, 1.0);
 
-		bool critical = rand < static_cast<double>(this->world->config["CriticalRate"]);
-
-		std::unordered_map<std::string, double> formula_vars;
-
-		from->FormulaVars(formula_vars);
-		npc->FormulaVars(formula_vars, "target_");
-		formula_vars["modifier"] = this->world->config["MobRate"];
-		formula_vars["damage"] = amount;
-		formula_vars["critical"] = critical;
-
-		amount = rpn_eval(rpn_parse(this->world->formulas_config["damage"]), formula_vars);
-		double hit_rate = rpn_eval(rpn_parse(this->world->formulas_config["hit_rate"]), formula_vars);
-
-		if (rand > hit_rate)
+		// Halloween 2016 NPC damage formula
+		if (victim->id >= 329 && victim->id <= 349)
 		{
-			amount = 0;
+			amount = util::rand(90*spell.cast_time + spell.mindam*2, 110*spell.cast_time + spell.maxdam*2); // TODO: Apply kill / completion boosts
+			double rand = util::rand(0.0, 1.0);
+			double hit_rate = ((100.0 - victim->ENF().evade) / 100.0);
+			
+			amount = amount * ((100.0 - victim->ENF().armor) / 100.0); // TODO: Apply shields and skulls
+			
+			amount = std::max(amount, 1);
+
+			if (rand > hit_rate)
+			{
+				amount = 0;
+			}
+		}
+		else if (victim->id == 350) // Halloween 2016 chest
+		{
+			if (from->hw2016_chests > 0)
+			{
+				amount = 1;
+				--from->hw2016_chests;
+			}
+			else
+			{
+				amount = 0;
+			}
+		}
+		else
+		{
+			bool critical = rand < static_cast<double>(this->world->config["CriticalRate"]);
+
+			std::unordered_map<std::string, double> formula_vars;
+
+			from->FormulaVars(formula_vars);
+			victim->FormulaVars(formula_vars, "target_");
+			formula_vars["modifier"] = this->world->config["MobRate"];
+			formula_vars["damage"] = amount;
+			formula_vars["critical"] = critical;
+
+			amount = rpn_eval(rpn_parse(this->world->formulas_config["damage"]), formula_vars);
+			double hit_rate = rpn_eval(rpn_parse(this->world->formulas_config["hit_rate"]), formula_vars);
+
+			if (rand > hit_rate)
+			{
+				amount = 0;
+			}
+
+			amount = std::max(amount, 0);
 		}
 
-		amount = std::max(amount, 0);
-
-		int limitamount = std::min(amount, int(npc->hp));
+		int limitamount = std::min(amount, int(victim->hp));
 
 		if (this->world->config["LimitDamage"])
 		{
 			amount = limitamount;
 		}
 
-		npc->Damage(from, amount, spell_id);
-		// *npc may not be valid here
+		victim->Damage(from, amount, spell_id);
+		// *victim may not be valid here
 	}
 }
 
@@ -2046,10 +2143,30 @@ void Map::SpellAttackPK(Character *from, Character *victim, unsigned short spell
 	}
 	else if (spell.type == ESF::Heal)
 	{
-		from->tp -= spell.tp;
+		if (spell_id == 11)
+		{
+			victim->shielded_until = Timer::GetTime() + 10.0;
+		}
 
+		int tploss = spell.tp;
 		int displayhp = spell.hp;
 		int hpgain = spell.hp;
+		
+		// Halloween 2016 healing spell scaling
+		if (from->mapid >= 286 && from->mapid <= 289)
+		{
+			if (from->hween_2016_aid_cooldown < Timer::GetTime())
+			{
+				from->hween_2016_aid_cooldown = Timer::GetTime() + 10.0;
+				++from->hw2016_points;
+			}
+
+			displayhp = std::max<int>(victim->maxhp * (spell.hp / 100.0), 1);
+			hpgain = displayhp;
+			tploss = std::max<int>(from->maxtp * (spell.tp / 100.0), 1);
+		}
+		
+		from->tp -= tploss;
 
 		if (this->world->config["LimitDamage"])
 			hpgain = std::min(hpgain, victim->maxhp - victim->hp);
@@ -2096,16 +2213,159 @@ void Map::SpellAttackPK(Character *from, Character *victim, unsigned short spell
 	from->Send(builder);
 }
 
-void Map::SpellGroup(Character *from, unsigned short spell_id)
+void Map::SpellAttackNPC(NPC *from, Character *victim, unsigned short spell_id)
+{
+	const ESF_Data& spell = victim->world->esf->Get(spell_id);
+
+	if (spell.type == ESF::Damage)
+	{
+		int amount = util::rand(from->ENF().mindam + spell.mindam, from->ENF().maxdam + spell.maxdam);
+		
+		// Halloween 2016 healing spell scaling
+		if (from->map->id >= 286 && from->map->id <= 289)
+		{
+			amount = std::max<int>(victim->maxhp * (from->ENF().maxdam * 1.5 / 100.0), 1);
+		}
+
+		amount = std::max(amount, 1);
+
+		int limitamount = std::min(amount, int(victim->hp));
+
+		if (this->world->config["LimitDamage"])
+		{
+			amount = limitamount;
+		}
+
+		victim->hp -= limitamount;
+
+		PacketBuilder builder(PACKET_AVATAR, PACKET_ADMIN, 12);
+		builder.AddShort(0);
+		builder.AddShort(victim->PlayerID());
+		builder.AddThree(amount);
+		builder.AddChar(0);
+		builder.AddChar(util::clamp<int>(double(victim->hp) / double(victim->maxhp) * 100.0, 0, 100));
+		builder.AddChar(victim->hp == 0);
+		builder.AddShort(spell_id);
+
+		UTIL_FOREACH(this->characters, character)
+		{
+			if (victim->InRange(character))
+				character->Send(builder);
+		}
+
+		if (victim->hp == 0)
+			victim->DeathRespawn();
+
+		builder.Reset(4);
+		builder.SetID(PACKET_RECOVER, PACKET_PLAYER);
+
+		builder.AddShort(victim->hp);
+		builder.AddShort(victim->tp);
+		victim->Send(builder);
+
+		if (victim->party)
+		{
+			victim->party->UpdateHP(victim);
+		}
+	}
+	else if (spell.type == ESF::Heal)
+	{
+		int displayhp = spell.hp;
+		int hpgain = spell.hp;
+
+		if (this->world->config["LimitDamage"])
+			hpgain = std::min(hpgain, victim->maxhp - victim->hp);
+
+		hpgain = std::max(hpgain, 0);
+
+		victim->hp += hpgain;
+
+		if (!this->world->config["LimitDamage"])
+			victim->hp = std::min(victim->hp, victim->maxhp);
+
+		PacketBuilder builder(PACKET_SPELL, PACKET_TARGET_OTHER, 18);
+		builder.AddShort(victim->PlayerID());
+		builder.AddShort(0);
+		builder.AddChar(0);
+		builder.AddShort(spell_id);
+		builder.AddInt(displayhp);
+		builder.AddChar(util::clamp<int>(double(victim->hp) / double(victim->maxhp) * 100.0, 0, 100));
+
+		UTIL_FOREACH(this->characters, character)
+		{
+			if (character != victim && victim->InRange(character))
+				character->Send(builder);
+		}
+
+		builder.AddShort(victim->hp);
+
+		victim->Send(builder);
+
+		if (victim->party)
+		{
+			victim->party->UpdateHP(victim);
+		}
+	}
+}
+
+/*void Map::SpellAttackNPC(NPC *from, NPC *victim, unsigned short spell_id)
 {
 	const ESF_Data& spell = from->world->esf->Get(spell_id);
 
+	if (!spell || spell.type != ESF::Damage || from->tp < spell.tp)
+		return;
+
+	if ((npc->ENF().type == ENF::Passive || npc->ENF().type == ENF::Aggressive) && npc->alive)
+	{
+		from->tp -= spell.tp;
+
+		int amount = util::rand(from->mindam + spell.mindam, from->maxdam + spell.maxdam);
+		double rand = util::rand(0.0, 1.0);
+
+		bool critical = rand < static_cast<double>(this->world->config["CriticalRate"]);
+
+		std::unordered_map<std::string, double> formula_vars;
+
+		from->FormulaVars(formula_vars);
+		npc->FormulaVars(formula_vars, "target_");
+		formula_vars["modifier"] = this->world->config["MobRate"];
+		formula_vars["damage"] = amount;
+		formula_vars["critical"] = critical;
+
+		amount = rpn_eval(rpn_parse(this->world->formulas_config["damage"]), formula_vars);
+		double hit_rate = rpn_eval(rpn_parse(this->world->formulas_config["hit_rate"]), formula_vars);
+
+		if (rand > hit_rate)
+		{
+			amount = 0;
+		}
+
+		amount = std::max(amount, 0);
+
+		int limitamount = std::min(amount, int(npc->hp));
+
+		if (this->world->config["LimitDamage"])
+		{
+			amount = limitamount;
+		}
+
+		npc->Damage(from, amount, spell_id);
+		// *npc may not be valid here
+	}
+}*/
+
+void Map::SpellGroup(Character *from, unsigned short spell_id)
+{
+	const ESF_Data& spell = from->world->esf->Get(spell_id);
+	
 	if (!spell || spell.type != ESF::Heal || !from->party || from->tp < spell.tp)
 		return;
 
 	from->tp -= spell.tp;
 
 	int displayhp = spell.hp;
+	
+	// TODO: Halloween 2016 scaling if possible
 
 	if (!from->CanInteractCombat() && !(from->CanInteractPKCombat() && (from->map->pk || (this->world->config["GlobalPK"] && !this->world->PKExcept(this->id)))))
 	{
@@ -2408,6 +2668,23 @@ void Map::Effect(MapEffect effect, unsigned char param)
 	}
 }
 
+void Map::SpellEffect(int x, int y, int effect)
+{
+	PacketBuilder builder(PACKET_EFFECT, PACKET_AGREE, 4);
+
+	builder.AddChar(x);
+	builder.AddChar(y);
+	builder.AddShort(effect);
+
+	UTIL_FOREACH(this->characters, character)
+	{
+		if (!character->InRange(x, y))
+			continue;
+
+		character->Send(builder);
+	}
+}
+
 bool Map::Evacuate()
 {
 	if (!this->evacuate_lock)
@@ -2430,15 +2707,29 @@ bool Map::Evacuate()
 	}
 }
 
-bool Map::Reload()
+std::string Map::MakeFilename(const char* suffix) const
 {
-	char namebuf[6];
-	char checkrid[4];
+	if (suffix == nullptr)
+		suffix = "";
+
+	char namebuf[32];
 
 	std::string filename = this->world->config["MapDir"];
-	std::sprintf(namebuf, "%05i", this->id);
+	std::snprintf(namebuf, 32, "%05i%s", this->id, suffix);
 	filename.append(namebuf);
 	filename.append(".emf");
+	
+	return filename;
+}
+
+bool Map::Reload(int reloadflags)
+{
+	return ReloadAs(this->filename, reloadflags);
+}
+
+bool Map::ReloadAs(const std::string& filename, int reloadflags)
+{
+	char checkrid[4];
 
 	std::FILE *fh = std::fopen(filename.c_str(), "rb");
 
@@ -2461,9 +2752,9 @@ bool Map::Reload()
 
 	std::list<Character *> temp = this->characters;
 
-	this->Unload();
+	this->Unload((reloadflags & ReloadIgnoreNPC) ? UnloadIgnoreNPC : 0);
 
-	if (!this->Load())
+	if (!this->Load(filename, (reloadflags & ReloadIgnoreNPC) ? LoadIgnoreNPC : 0))
 	{
 		return false;
 	}
@@ -2472,7 +2763,7 @@ bool Map::Reload()
 
 	UTIL_FOREACH(temp, character)
 	{
-		character->player->client->Upload(FILE_MAP, character->mapid, INIT_MAP_MUTATION);
+		character->player->client->Upload(FILE_MAP, this->filename, INIT_MAP_MUTATION);
 		character->Refresh(); // TODO: Find a better way to reload NPCs
 	}
 
@@ -2526,6 +2817,12 @@ void Map::TimedDrains()
 	if (this->effect == EffectHPDrain)
 	{
 		double hpdrain_damage = this->world->config["DrainHPDamage"];
+		
+		if (this->id == 18 && this->world->config["Halloween2016"]) // Aeven Sewer - Halloween event
+			hpdrain_damage = 0.05;
+		
+		if (this->id == 286) // Halloween event
+			hpdrain_damage = 0.05;
 
 		std::vector<int> damage_map;
 		damage_map.resize(this->characters.size());
@@ -2538,6 +2835,10 @@ void Map::TimedDrains()
 				continue;
 
 			int amount = character->maxhp * hpdrain_damage;
+			
+			if (amount == 0)
+				amount = 1;
+			
 			amount = std::max(std::min(amount, int(character->hp - 1)), 0);
 			character->hp -= amount;
 
@@ -2585,6 +2886,9 @@ void Map::TimedDrains()
 	if (this->effect == EffectTPDrain)
 	{
 		double tpdrain_damage = this->world->config["DrainTPDamage"];
+		
+		if (this->id == 287) // Halloween event
+			tpdrain_damage = 0.1;
 
 		for (Character* character : this->characters)
 		{

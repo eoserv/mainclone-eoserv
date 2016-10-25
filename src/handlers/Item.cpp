@@ -8,13 +8,16 @@
 
 #include "../character.hpp"
 #include "../config.hpp"
+#include "../eoclient.hpp"
 #include "../eodata.hpp"
 #include "../map.hpp"
 #include "../npc.hpp"
 #include "../party.hpp"
+#include "../player.hpp"
 #include "../quest.hpp"
 #include "../world.hpp"
 
+#include "../console.hpp"
 #include "../util.hpp"
 
 #include <algorithm>
@@ -149,7 +152,41 @@ void Item_Use(Character *character, PacketReader &reader)
 
 				int hpgain = item.hp;
 				int tpgain = item.tp;
+				
+				if (character->mapid >= 286 && character->mapid <= 289)
+				{
+					if (id == 16)
+					{
+						hpgain = 30;
+						tpgain = 20;
+						
+						if (character->maxhp < 50) { hpgain += 10; }
+						if (character->maxhp < 40) { hpgain += 10; }
+						if (character->maxhp < 30) { hpgain += 10; }
+						if (character->maxhp < 20) { hpgain += 10; }
+						
+						if (character->maxtp < 60) { tpgain += 10; }
+						if (character->maxtp < 40) { tpgain += 10; }
+						if (character->maxtp < 20) { tpgain += 10; }
+					}
+					else if (id == 377)
+					{
+						hpgain = 100;
+						tpgain = 100;
+						character->Effect(30, 1);
+					}
+					else
+					{
+						hpgain /= 2;
+					}
 
+					if (hpgain > 0)
+						hpgain = std::max<int>(character->maxhp * (hpgain / 100.0), 1);
+					
+					if (tpgain > 0)
+						tpgain = std::max<int>(character->maxtp * (tpgain / 100.0), 1);
+				}
+				
 				if (character->world->config["LimitDamage"])
 				{
 					hpgain = std::min(hpgain, character->maxhp - character->hp);

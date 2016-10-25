@@ -291,6 +291,627 @@ void world_quakes(void *world_void)
 	}
 }
 
+static int world_hw2016_hour()
+{
+	return ((std::time(nullptr) + 60) / 3600);
+}
+
+void world_hw2016(void *world_void)
+{
+	World *world = static_cast<World *>(world_void);
+	
+	if (!world->maps[5-1] || !world->maps[286-1] || !world->maps[287-1] || !world->maps[288-1] || !world->maps[289-1])
+	{
+		Console::Dbg("Halloween event is broken! Maps not found");
+		return;
+	}
+	
+	auto clear_map_npcs = [&](int mapid)
+	{
+		std::vector<NPC*> despawn_npcs;
+
+		for (NPC* npc : world->maps[mapid-1]->npcs)
+		{
+			despawn_npcs.push_back(npc);
+		}
+
+		for (NPC* npc : despawn_npcs)
+		{
+			npc->Die();
+		}
+	};
+	
+	auto clear_map_characters = [&](int mapid)
+	{
+		auto chars = world->maps[mapid-1]->characters;
+		world->maps[mapid-1]->TimedDrains();
+		
+		for (Character* character : chars)
+		{
+			character->SpikeDamage(std::max<int>(character->maxhp, 9999));
+			
+			if (character->hp == 0)
+				character->DeathRespawn();
+		}
+	};
+	
+	auto warp_map_characters = [&](int mapid, int newmapid)
+	{
+		auto chars = world->maps[mapid-1]->characters;
+		world->maps[mapid-1]->TimedDrains();
+		
+		for (Character* character : chars)
+		{
+			character->Warp(newmapid, character->x, character->y, WARP_ANIMATION_NONE);
+		}
+	};
+	
+	auto abort_halloween = [&]()
+	{
+		for (int i = 286; i <= 289; ++i)
+		{
+			clear_map_npcs(i);
+			clear_map_characters(i);
+		}
+		
+		world->hw2016_state = 0;
+	};
+	
+	auto spawn_npc = [&](int mapid, int x, int y, int id, int speed) -> NPC*
+	{
+		Map* map = world->GetMap(mapid);
+
+		unsigned char index = map->GenerateNPCIndex();
+
+		if (index > 251)
+			return nullptr;
+
+		NPC *npc = new NPC(map, id, x, y, speed, DIRECTION_DOWN, index, true);
+		map->npcs.push_back(npc);
+		npc->Spawn();
+		
+		return npc;
+	};
+	
+	const int monster_apozen = 329;
+	const int monster_bat = 331;
+	const int monster_banshee = 337;
+	const int monster_chaos = 335;
+	const int monster_crane = 342;
+	const int monster_mask = 343;
+	const int monster_flyman = 346;
+	const int monster_imp1 = 347;
+	const int monster_imp2 = 348;
+	const int monster_inferno = 340;
+	const int monster_puppet = 344;
+	const int monster_reaper = 345;
+	const int monster_skel_warlock = 334;
+	const int monster_skel_warrior = 333;
+	const int monster_spider = 332;
+	const int monster_tentacle = 341;
+	const int monster_twin_demon = 349;
+	const int monster_wraith = 339;
+	
+	const int speed_veryfast = 1;
+	const int speed_fast = 0;
+	const int speed_slow = 2;
+	//const int speed_veryslow = 3;
+	
+	const int cave_x[4] = {4, 4, 16, 17};
+	const int cave_y[4] = {6, 15, 18, 4};
+	
+	int hour = world_hw2016_hour();
+	
+	if (world->hw2016_hour != hour)
+	{
+		Console::Dbg("It's a new hour!");
+
+		if (world->hw2016_state == -1)
+		{
+			world->hw2016_state = 0;
+			world->hw2016_hour = hour; // test event
+		}
+		else if (world->hw2016_state == 0)
+		{
+			if (!world->config["Halloween2016"])
+			{
+				Console::Dbg("Halloween event is disabled.");
+				world->hw2016_hour = hour;
+				return;
+			}
+
+			Console::Dbg("Halloween event activated!");
+			world->hw2016_state = 1;
+			world->hw2016_tick = -5;
+		}
+	}
+	
+	if (world->hw2016_state == 0)
+		return;
+
+	world->hw2016_tick += 5;
+	
+	world->hw2016_hour = hour;
+	
+	Console::Dbg("Halloween event debug: state:%d, tick:%d", world->hw2016_state, world->hw2016_tick);
+
+	switch (world->hw2016_state)
+	{
+		case 1:
+			if (world->hw2016_tick == 0)
+			{
+				world->maps[5-1]->Effect(MAP_EFFECT_QUAKE, 2);
+			}
+			else if (world->hw2016_tick == 30)
+			{
+				world->maps[5-1]->Effect(MAP_EFFECT_QUAKE, 4);
+			}
+			else if (world->hw2016_tick == 60)
+			{
+				clear_map_npcs(286);
+
+				world->maps[5-1]->Effect(MAP_EFFECT_QUAKE, 6);
+				
+				if (world->config["Halloween2016Noisy"])
+					world->ServerMsg("A sinkhole is about to open up in the center of Aeven!");
+			}
+			else if (world->hw2016_tick == 90)
+			{
+				world->maps[5-1]->Effect(MAP_EFFECT_QUAKE, 8);
+				world->maps[5-1]->ReloadAs(std::string(world->config["MapDir"]) + "00005h-r7-sinkhole.emf", Map::ReloadIgnoreNPC);
+			}
+			else if (world->hw2016_tick == 150)
+			{
+				if (world->maps[286-1]->characters.size() == 0)
+				{
+					abort_halloween();
+				}
+
+				world->maps[5-1]->ReloadAs(std::string(world->config["MapDir"]) + "00005h-r7-nospooks.emf", Map::ReloadIgnoreNPC);
+				world->hw2016_spawncount = std::min<int>((world->maps[286-1]->characters.size() + 1) / 2, 5);
+				world->hw2016_monstermod = 1.0 + std::max<int>(world->maps[286-1]->characters.size() - 10, 0) * 0.1;
+				
+				if (world->maps[286-1]->characters.size() == 1)
+					world->maps[286-1]->characters.front()->hw2016_points = 50;
+				
+				if (world->maps[286-1]->characters.size() == 2)
+					world->hw2016_monstermod = 1.5;
+				else if (world->maps[286-1]->characters.size() == 4)
+					world->hw2016_monstermod = 1.3;
+				else if (world->maps[286-1]->characters.size() == 6)
+					world->hw2016_monstermod = 1.2;
+				else if (world->maps[286-1]->characters.size() == 8)
+					world->hw2016_monstermod = 1.15;
+				
+				world->hw2016_state = 10;
+				world->hw2016_tick = -5;
+			}
+			break;
+
+		case 10:
+			if (world->hw2016_tick == 0 || world->hw2016_tick == 15)
+			{
+				if (world->hw2016_tick == 0)
+					world->maps[286-1]->Effect(MAP_EFFECT_QUAKE, 2);
+
+				for (int i = 0; i < 4; ++i)
+				{
+					int x = cave_x[i];
+					int y = cave_y[i];
+					
+					for (int ii = 0; ii < world->hw2016_spawncount; ++ii)
+					{
+						if (util::rand(0,1))
+							spawn_npc(286, x, y, monster_bat, speed_fast);
+						else
+							spawn_npc(286, x, y, monster_spider, speed_slow);
+					}
+				}
+			}
+			else if (world->hw2016_tick == 900)
+			{
+				abort_halloween();
+			}
+			else
+			{
+				if (world->maps[286-1]->npcs.size() < world->hw2016_spawncount)
+				{
+					world->hw2016_state = 11;
+					world->hw2016_tick = -5;
+				}
+			}
+			break;
+
+		case 11:
+			if (world->hw2016_tick == 0 || world->hw2016_tick == 15)
+			{
+				if (world->hw2016_tick == 0)
+					world->maps[286-1]->Effect(MAP_EFFECT_QUAKE, 3);
+
+				for (int i = 0; i < 4; ++i)
+				{
+					int x = cave_x[i];
+					int y = cave_y[i];
+					
+					for (int ii = 0; ii < world->hw2016_spawncount; ++ii)
+					{
+						if (util::rand(0,1))
+							spawn_npc(286, x, y, monster_skel_warrior, speed_fast);
+						else
+							if (util::rand(0,3))
+								spawn_npc(286, x, y, monster_reaper, speed_fast);
+							else
+								spawn_npc(286, x, y, monster_skel_warlock, speed_slow);
+					}
+				}
+			}
+			else if (world->hw2016_tick == 900)
+			{
+				abort_halloween();
+			}
+			else
+			{
+				if (world->maps[286-1]->npcs.size() < world->hw2016_spawncount)
+				{
+					world->hw2016_state = 12;
+					world->hw2016_tick = -5;
+				}
+			}
+			break;
+
+		case 12:
+			if (world->hw2016_tick == 0 || world->hw2016_tick == 15)
+			{
+				if (world->hw2016_tick == 0)
+					world->maps[286-1]->Effect(MAP_EFFECT_QUAKE, 4);
+
+				for (int i = 0; i < 4; ++i)
+				{
+					int x = cave_x[i];
+					int y = cave_y[i];
+					
+					for (int ii = 0; ii < world->hw2016_spawncount; ++ii)
+					{
+						if (util::rand(0,1))
+							spawn_npc(286, x, y, monster_banshee, speed_slow);
+						else
+							if (util::rand(0,1))
+								spawn_npc(286, x, y, monster_reaper, speed_fast);
+							else
+								spawn_npc(286, x, y, monster_chaos, speed_slow);
+					}
+				}
+			}
+			else if (world->hw2016_tick == 900)
+			{
+				abort_halloween();
+			}
+			else
+			{
+				if (world->maps[286-1]->npcs.size() == 0)
+				{
+					world->maps[286-1]->Effect(MAP_EFFECT_QUAKE, 3);
+					world->maps[286-1]->ReloadAs(std::string(world->config["MapDir"]) + "00286-hole.emf", Map::ReloadIgnoreNPC);
+
+					clear_map_npcs(287);
+
+					world->hw2016_state = 20;
+					world->hw2016_tick = -5;
+					
+					spawn_npc(287, 8, 29, monster_tentacle, speed_fast);
+					spawn_npc(287, 9, 28, monster_tentacle, speed_fast);
+					spawn_npc(287, 1, 35, monster_tentacle, speed_fast);
+					spawn_npc(287, 6, 17, monster_tentacle, speed_fast);
+					spawn_npc(287, 7, 16, monster_tentacle, speed_fast);
+					
+					spawn_npc(287, 20, 21, monster_tentacle, speed_fast);
+				
+					world->hw2016_hallway_spawnrow = 86;
+					world->hw2016_hallway = 0;
+				}
+			}
+			break;
+		
+		case 20:
+			if (world->hw2016_tick >= 5 && world->hw2016_tick <= 30)
+			{
+				world->maps[286-1]->Effect(MAP_EFFECT_QUAKE, 5);
+				
+				auto chars = world->maps[286-1]->characters;
+				
+				for (Character* character : chars)
+				{
+					if (world->hw2016_tick < 30)
+						character->SpikeDamage(character->maxhp * (0.1 * (world->hw2016_tick / 5)));
+					else
+						character->SpikeDamage(std::min<int>(character->maxhp, 9999));
+					
+					if (character->hp == 0)
+						character->DeathRespawn();
+				}
+			}
+			
+			if (world->hw2016_tick == 30)
+			{				
+				world->maps[286-1]->ReloadAs(std::string(world->config["MapDir"]) + "00286.emf", Map::ReloadIgnoreNPC);
+
+				clear_map_npcs(288);
+
+				world->hw2016_state = 21;
+				world->hw2016_tick = -5;
+				
+				for (int i = 0; i < 20; ++i)
+				{
+					int x = util::rand(4, 19);
+					int y = util::rand(86, 94);
+
+					spawn_npc(287, x, y, monster_crane, speed_veryfast);
+				}
+			}
+			break;
+		
+		case 21:
+			{
+				++world->hw2016_hallway;
+				
+				if (world->hw2016_hallway_spawnrow >= 82 - world->hw2016_hallway / 4 * 2)
+				{
+					if (world->hw2016_hallway_spawnrow > 42)
+					{
+						world->hw2016_hallway_spawnrow -= 4;
+						world->hw2016_spawn_hallway_row(world->hw2016_hallway_spawnrow);
+					}
+				}
+			}
+
+			// Too many cranes :(
+			/*if (world->hw2016_tick % 30 == 0)
+			{
+				for (int i = 0; i < 5; ++i)
+				{
+					int x = util::rand(4, 19);
+					int y = util::rand(86, 94);
+
+					spawn_npc(287, x, y, monster_crane, speed_fast);
+				}
+			}*/
+			
+			if (world->hw2016_tick >= 900)
+			{
+				Console::Dbg("Halloween event state 30 forced: Noone reached darkness in 15 mins");
+				world->hw2016_state = 30;
+				world->hw2016_tick = -5;
+			}
+			break;
+		
+		case 30: // Triggered by first player to enter the next zone
+			if (world->hw2016_tick <= 30)
+				world->maps[287-1]->Effect(MAP_EFFECT_QUAKE, 3);
+
+			if (world->hw2016_tick == 20)
+			{
+				for (int i = 0; i < 2; ++i)
+					for (int ii = 0; i < world->hw2016_spawncount; ++i)
+					{
+						int x = util::rand(2, 19);
+						int y = util::rand(2, 20);
+
+						spawn_npc(288, x, y, monster_puppet, speed_slow);
+					}
+			}
+			
+			if (world->hw2016_tick == 30)
+			{
+				for (int i = 0; i < 2; ++i)
+					for (int ii = 0; i < world->hw2016_spawncount; ++i)
+					{
+						int x = util::rand(2, 19);
+						int y = util::rand(2, 20);
+
+						spawn_npc(288, x, y, monster_puppet, speed_slow);
+					}
+
+				clear_map_characters(287);
+				clear_map_npcs(287);
+
+				world->hw2016_state = 31;
+				world->hw2016_tick = -5;
+			}
+			break;
+		
+		case 31:
+			if (world->hw2016_tick % 10 == 0)
+			{
+				if (world->hw2016_tick <= 90)
+				{
+					for (int ii = 0; ii < world->hw2016_spawncount; ++ii)
+					{
+						int x = util::rand(2, 19);
+						int y = util::rand(2, 20);
+
+						switch (util::rand(0,3))
+						{
+							case 0:
+								spawn_npc(288, x, y, monster_mask, speed_fast);
+								break;
+							
+							case 1:
+								spawn_npc(288, x, y, monster_reaper, speed_veryfast);
+								break;
+							
+							case 2:
+							case 3:
+								spawn_npc(288, x, y, monster_wraith, speed_fast);
+								break;
+						}
+					}
+				}
+				else if (world->hw2016_tick <= 180)
+				{
+					for (int ii = 0; ii < world->hw2016_spawncount; ++ii)
+					{
+						int x = util::rand(2, 19);
+						int y = util::rand(2, 20);
+
+						switch (util::rand(0,3))
+						{
+							case 0:
+								spawn_npc(288, x, y, monster_mask, speed_fast);
+								break;
+							
+							case 1:
+								spawn_npc(288, x, y, monster_flyman, speed_fast);
+								break;
+							
+							case 2:
+							case 3:
+								spawn_npc(288, x, y, monster_reaper, speed_veryfast);
+								break;
+						}
+					}
+				}
+				
+				if (world->maps[288-1]->npcs.size() > 1 && util::rand(0,3) == 3)
+				{
+					int x = util::rand(2, 19);
+					int y = util::rand(2, 20);
+
+					spawn_npc(288, x, y, monster_inferno, speed_veryfast);
+				}
+			}
+			
+			if (world->hw2016_tick > 180 && world->maps[288-1]->npcs.size() == 0)
+			{
+				clear_map_npcs(289);
+
+				world->hw2016_state = 40;
+				world->hw2016_tick = -5;
+				
+				for (int i = 0; i < 2; ++i)
+					for (int ii = 0; ii < world->hw2016_spawncount; ++ii)
+					{
+						int x = util::rand(2, 19);
+						int y = util::rand(2, 20);
+
+						spawn_npc(289, x, y, monster_imp1, speed_veryfast);
+					}
+				
+				for (int i = 0; i < 2; ++i)
+					for (int ii = 0; ii < world->hw2016_spawncount; ++ii)
+					{
+						int x = util::rand(2, 19);
+						int y = util::rand(2, 20);
+
+						spawn_npc(289, x, y, monster_imp2, speed_veryfast);
+					}
+
+				warp_map_characters(288, 289);
+			}
+			else if (world->hw2016_tick == 900)
+			{
+				abort_halloween();
+			}
+			break;
+		
+		case 40:
+			if (world->maps[289-1]->npcs.size() == 0)
+			{
+				world->hw2016_state = 41;
+				world->hw2016_tick = -5;
+				
+				world->maps[5-1]->Effect(MAP_EFFECT_QUAKE, 8);
+				NPC* apozen = spawn_npc(289, 13, 11, monster_apozen, speed_slow);
+				
+				if (apozen)
+					apozen->Say("YOU DARE BRING LIGHT TO MY LAIR?!");
+				else
+					abort_halloween();
+			}
+			else if (world->hw2016_tick == 600)
+			{
+				abort_halloween();
+			}
+			break;
+		
+		case 41:
+			if (world->hw2016_tick == 1800)
+			{
+				abort_halloween();
+			}
+			break;
+			
+		default:
+			break;
+	}
+}
+
+void World::hw2016_spawn_hallway_row(int row)
+{
+	const int monster_magician = 336;
+	const int monster_headless = 338;
+	const int monster_inferno = 340;
+	const int monster_wraith = 339;
+
+	const int speed_fast = 0;
+	const int speed_slow = 2;
+	
+	const int hallway1_x[4] = {7, 9, 11};
+	
+	const int hallway2_x[4] = {9, 11, 13};
+	
+	Console::Dbg("Spawning row %d", row);
+	
+	auto spawn_npc = [&](int mapid, int x, int y, int id, int speed) -> NPC*
+	{
+		Map* map = this->GetMap(mapid);
+
+		unsigned char index = map->GenerateNPCIndex();
+
+		if (index > 251)
+			return nullptr;
+
+		NPC *npc = new NPC(map, id, x, y, speed, DIRECTION_DOWN, index, true);
+		map->npcs.push_back(npc);
+		npc->Spawn();
+		
+		return npc;
+	};
+
+	for (int i = 0; i < 3; ++i)
+	{
+		int x = hallway1_x[i];
+		int y = row;
+		
+		if (row < 60)
+			x = hallway2_x[i];
+		
+		for (int ii = 0; ii < this->hw2016_spawncount; ++ii)
+		{
+			if (util::rand(0, 25 + this->hw2016_spawncount * 3) == 0)
+			{
+				spawn_npc(287, x, y, monster_inferno, speed_fast);
+			}
+			else
+			{
+				switch (util::rand(0,4))
+				{
+					case 0:
+						spawn_npc(287, x, y, monster_magician, speed_slow);
+						break;
+
+					case 1:
+						spawn_npc(287, x, y, monster_headless, speed_fast);
+						break;
+					
+					case 2:
+						spawn_npc(287, x, y, monster_wraith, speed_fast);
+						break;
+				}
+			}
+		}
+	}
+}
+
 void World::NormalizePassword(std::string& s)
 {
 	auto pw_isnum = [](char c){ return c >= '0' && c <= '9'; };
@@ -524,6 +1145,8 @@ World::World(std::array<std::string, 6> dbinfo, const Config &eoserv_config, con
 
 	this->config = eoserv_config;
 	this->admin_config = admin_config;
+	
+	this->astar.SetMaxDistance(15);
 
 	Database::Engine engine;
 
@@ -682,6 +1305,12 @@ World::World(std::array<std::string, 6> dbinfo, const Config &eoserv_config, con
 	if (this->config["QuakeRate"])
 	{
 		event = new TimeEvent(world_quakes, this, static_cast<double>(this->config["QuakeRate"]), Timer::FOREVER);
+		this->timer.Register(event);
+	}
+	
+	{
+		//event = new TimeEvent(world_hw2016, this, 5.0, Timer::FOREVER);
+		event = new TimeEvent(world_hw2016, this, 5.0, Timer::FOREVER); // Overclocked 1x
 		this->timer.Register(event);
 	}
 

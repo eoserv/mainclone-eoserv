@@ -17,6 +17,8 @@ set(eoserv_UNITY_SOURCE_FILES
 set(eoserv_ALL_SOURCE_FILES
 	src/arena.cpp
 	src/arena.hpp
+	src/astar.cpp
+	src/astar.hpp
 	src/character.cpp
 	src/character.hpp
 	src/command_source.cpp
@@ -78,6 +80,7 @@ set(eoserv_ALL_SOURCE_FILES
 	src/fwd/map.hpp
 	src/fwd/nanohttp.hpp
 	src/fwd/npc.hpp
+	src/fwd/npc_ai.hpp
 	src/fwd/npc_data.hpp
 	src/fwd/packet.hpp
 	src/fwd/party.hpp
@@ -140,6 +143,30 @@ set(eoserv_ALL_SOURCE_FILES
 	src/nanohttp.hpp
 	src/npc.cpp
 	src/npc.hpp
+	src/npc_ai.cpp
+	src/npc_ai.hpp
+	src/npc_ai/npc_ai_hw2016_apozen.cpp
+	src/npc_ai/npc_ai_hw2016_apozen.hpp
+	src/npc_ai/npc_ai_hw2016_apozenskull.cpp
+	src/npc_ai/npc_ai_hw2016_apozenskull.hpp
+	src/npc_ai/npc_ai_hw2016_banshee.cpp
+	src/npc_ai/npc_ai_hw2016_banshee.hpp
+	src/npc_ai/npc_ai_hw2016_crane.cpp
+	src/npc_ai/npc_ai_hw2016_crane.hpp
+	src/npc_ai/npc_ai_hw2016_cursed_mask.cpp
+	src/npc_ai/npc_ai_hw2016_cursed_mask.hpp
+	src/npc_ai/npc_ai_hw2016_dark_magician.cpp
+	src/npc_ai/npc_ai_hw2016_dark_magician.hpp
+	src/npc_ai/npc_ai_hw2016_inferno_grenade.cpp
+	src/npc_ai/npc_ai_hw2016_inferno_grenade.hpp
+	src/npc_ai/npc_ai_hw2016_skeleton_warlock.cpp
+	src/npc_ai/npc_ai_hw2016_skeleton_warlock.hpp
+	src/npc_ai/npc_ai_hw2016_tentacle.cpp
+	src/npc_ai/npc_ai_hw2016_tentacle.hpp
+	src/npc_ai/npc_ai_magic.cpp
+	src/npc_ai/npc_ai_magic.hpp
+	src/npc_ai/npc_ai_ranged.cpp
+	src/npc_ai/npc_ai_ranged.hpp
 	src/npc_data.cpp
 	src/npc_data.hpp
 	src/packet.cpp

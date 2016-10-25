@@ -201,6 +201,10 @@ class Character : public Command_Source
 		bool bot;
 
 		bool can_set_title = false;
+		double shielded_until = 0.0;
+		int hw2016_chests = 0;
+		int hw2016_points = 0;
+		double hween_2016_aid_cooldown = 0.0;
 
 		std::string faux_name;
 
@@ -278,7 +282,7 @@ class Character : public Command_Source
 		std::array<int, 15> paperdoll;
 		std::array<int, 15> cosmetic_paperdoll;
 		std::list<Character_Spell> spells;
-		std::list<NPC *> unregister_npc;
+		std::set<NPC *> unregister_npc;
 		std::map<short, std::shared_ptr<Quest_Context>> quests;
 		std::unordered_map<std::string, util::variant> vars;
 		std::set<Character_QuestState> quests_inactive;
@@ -356,6 +360,10 @@ class Character : public Command_Source
 		void Reset();
 		std::shared_ptr<Quest_Context> GetQuest(short id);
 		void ResetQuest(short id);
+		
+		// Adds/removes a logout notification to an NPC
+		void RegisterNPC(NPC*);
+		void UnregisterNPC(NPC*);
 
 		void SpikeDamage(int amount);
 		void DeathRespawn();

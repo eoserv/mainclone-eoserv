@@ -5,6 +5,7 @@
  */
 
 #include "../src/arena.cpp"
+#include "../src/astar.cpp"
 #include "../src/dialog.cpp"
 #include "../src/guild.cpp"
 #include "../src/quest.cpp"

@@ -15,6 +15,7 @@
 #include "../world.hpp"
 #include "../extra/seose_compat.hpp"
 
+#include "../console.hpp"
 #include "../util.hpp"
 #include "../util/secure_string.hpp"
 

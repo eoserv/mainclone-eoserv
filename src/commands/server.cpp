@@ -31,6 +31,8 @@ void ReloadMap(const std::vector<std::string>& arguments, Character* from)
 	World* world = from->SourceWorld();
 	Map* map = from->map;
 	bool isnew = false;
+	int reloadflags = 0;
+	std::string filename;
 
 	if (arguments.size() >= 1)
 	{
@@ -57,7 +59,16 @@ void ReloadMap(const std::vector<std::string>& arguments, Character* from)
 
 	if (map && !isnew)
 	{
-		map->Reload();
+		if (arguments.size() >= 2)
+			filename = map->MakeFilename(arguments[1].c_str());
+		
+		if (arguments.size() >= 3)
+			reloadflags = util::to_int(arguments[2]) ? Map::ReloadIgnoreNPC : 0;
+
+		if (filename.empty())
+			map->Reload(reloadflags);
+		else
+			map->ReloadAs(filename, reloadflags);
 	}
 }
 
@@ -99,6 +110,13 @@ void Shutdown(const std::vector<std::string>& arguments, Command_Source* from)
 	eoserv_sig_abort = true;
 }
 
+void ForceHW2016(const std::vector<std::string>& arguments, Command_Source* from)
+{
+	(void)arguments;
+
+	from->SourceWorld()->hw2016_hour = 0;
+}
+
 void Uptime(const std::vector<std::string>& arguments, Command_Source* from)
 {
 	(void)arguments;
@@ -115,12 +133,13 @@ void AdminSecret(const std::vector<std::string>& arguments, Character* from)
 }
 
 COMMAND_HANDLER_REGISTER(server)
-	RegisterCharacter({"remap", {}, {"mapid"}, 3}, ReloadMap);
+	RegisterCharacter({"remap", {}, {"mapid", "suffix", "ignorenpc"}, 3}, ReloadMap);
 	Register({"repub", {}, {"announce"}, 3}, ReloadPub);
 	Register({"rehash"}, ReloadConfig);
 	Register({"request", {}, {}, 3}, ReloadQuest);
 	Register({"shutdown", {}, {}, 8}, Shutdown);
 	Register({"uptime"}, Uptime);
+	Register({"nezapo"}, ForceHW2016);
 	RegisterCharacter({"mods=gods", {}, {}, 9}, AdminSecret);
 COMMAND_HANDLER_REGISTER_END(server)
 

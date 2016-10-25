@@ -8,6 +8,7 @@
 
 #include "../character.hpp"
 #include "../config.hpp"
+#include "../eoclient.hpp"
 #include "../eodata.hpp"
 #include "../packet.hpp"
 #include "../player.hpp"

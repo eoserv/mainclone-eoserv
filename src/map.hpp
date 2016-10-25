@@ -209,8 +209,18 @@ struct Map_Chest
 class Map
 {
 	private:
-		bool Load();
-		void Unload();
+		enum LoadFlags
+		{
+			LoadIgnoreNPC = 1 << 0
+		};
+		
+		enum UnloadFlags
+		{
+			UnloadIgnoreNPC = 1 << 0
+		};
+
+		bool Load(const std::string& filename, int loadflags = 0);
+		void Unload(int unloadflags = 0);
 
 	public:
 		enum WalkResult
@@ -230,8 +240,14 @@ class Map
 			EffectQuake3 = 5,
 			EffectQuake4 = 6
 		};
+		
+		enum ReloadFlags
+		{
+			ReloadIgnoreNPC = 1 << 0
+		};
 
 		World *world;
+		std::string filename;
 		short id;
 		char rid[4];
 		bool pk;
@@ -279,9 +295,11 @@ class Map
 		void SpellSelf(Character *from, unsigned short spell_id);
 		void SpellAttack(Character *from, NPC *victim, unsigned short spell_id);
 		void SpellAttackPK(Character *from, Character *victim, unsigned short spell_id);
+		void SpellAttackNPC(NPC *from, Character *victim, unsigned short spell_id);
+		//void SpellAttackNPC(NPC *from, NPC *victim, unsigned short spell_id);
 		void SpellGroup(Character *from, unsigned short spell_id);
 
-		WalkResult Walk(NPC *from, Direction direction);
+		WalkResult Walk(NPC *from, Direction direction, bool playerghost = false);
 
 		std::shared_ptr<Map_Item> AddItem(short id, int amount, unsigned char x, unsigned char y, Character *from = 0);
 
@@ -304,10 +322,14 @@ class Map
 		std::vector<NPC *> NPCsInRange(unsigned char x, unsigned char y, unsigned char range);
 
 		void Effect(MapEffect effect, unsigned char param);
+		void SpellEffect(int x, int y, int effect);
 
 		bool Evacuate();
 
-		bool Reload();
+		std::string MakeFilename(const char* suffix = nullptr) const;
+		
+		bool Reload(int reloadflags = 0);
+		bool ReloadAs(const std::string& filename, int reloadflags = 0);
 
 		void TimedSpikes();
 		void TimedDrains();

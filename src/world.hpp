@@ -19,6 +19,7 @@
 #include "fwd/party.hpp"
 #include "fwd/player.hpp"
 #include "fwd/quest.hpp"
+#include "astar.hpp"
 #include "config.hpp"
 #include "database.hpp"
 #include "i18n.hpp"
@@ -81,6 +82,7 @@ class World
 
 	public:
 		Timer timer;
+		AStar astar;
 
 		EOServer *server;
 		Database db;
@@ -119,6 +121,20 @@ class World
 		std::unordered_set<std::string> insecure_passwords;
 
 		int admin_count;
+		
+		// -1 = not initialized
+		// 0 = not running
+		int hw2016_hour = -1;
+		int hw2016_state = -1;
+		int hw2016_tick = 0;
+		int hw2016_spawncount = 0;
+		double hw2016_monstermod = 0.0;
+		int hw2016_hallway = 0;
+		int hw2016_hallway_spawnrow = 0;
+		int hw2016_nezapo = 0;
+		int hw2016_nezapo_required = 0;
+		
+		void hw2016_spawn_hallway_row(int row);
 
 		World(std::array<std::string, 6> dbinfo, const Config &eoserv_config, const Config &admin_config);
 

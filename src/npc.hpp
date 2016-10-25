@@ -12,6 +12,7 @@
 #include "fwd/character.hpp"
 #include "fwd/eodata.hpp"
 #include "fwd/map.hpp"
+#include "fwd/npc_ai.hpp"
 #include "fwd/npc_data.hpp"
 
 #include <array>
@@ -45,8 +46,6 @@ class NPC
 		double dead_since;
 		double last_act;
 		double act_speed;
-		int walk_idle_for;
-		bool attack;
 		int hp;
 		int totaldamage;
 		std::list<std::unique_ptr<NPC_Opponent>> damagelist;
@@ -56,6 +55,8 @@ class NPC
 		unsigned char spawn_type;
 		short spawn_time;
 		unsigned char spawn_x, spawn_y;
+
+		std::unique_ptr<NPC_AI> ai;
 
 		int id;
 
@@ -69,13 +70,23 @@ class NPC
 		void Spawn(NPC *parent = 0);
 		void Act();
 
-		bool Walk(Direction);
+		bool Walk(Direction, bool playerghost = false);
 		void Damage(Character *from, int amount, int spell_id = -1);
 		void RemoveFromView(Character *target);
 		void Killed(Character *from, int amount, int spell_id = -1);
 		void Die(bool show = true);
+		void Effect(int effect);
+		
+		// Called by the AI in some cases when a character should be (un)registered explicitly/early for a logout event
+		void RegisterCharacter(Character*);
+		void UnregisterCharacter(Character*);
+		
+		// Called by Character on logout if logout event is registered
+		void UnregisterCharacterEvent(Character*);
 
-		void Attack(Character *target);
+		void Attack(Character *target, bool ranged = false);
+		
+		void Say(const std::string& message);
 
 		void FormulaVars(std::unordered_map<std::string, double> &vars, std::string prefix = "");
 

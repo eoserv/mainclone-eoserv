@@ -1914,6 +1914,16 @@ void Character::ResetQuest(short id)
 	this->quests[id].reset();
 }
 
+void Character::RegisterNPC(NPC* npc)
+{
+	unregister_npc.insert(npc);
+}
+
+void Character::UnregisterNPC(NPC* npc)
+{
+	unregister_npc.erase(npc);
+}
+
 void Character::SpikeDamage(int amount)
 {
 	int limitamount = std::min(amount, int(this->hp));
@@ -2183,16 +2193,10 @@ void Character::Logout()
 
 	UTIL_FOREACH(this->unregister_npc, npc)
 	{
-		UTIL_IFOREACH(npc->damagelist, it)
-		{
-			if ((*it)->attacker == this)
-			{
-				npc->totaldamage -= (*it)->damage;
-				npc->damagelist.erase(it);
-				break;
-			}
-		}
+		npc->UnregisterCharacterEvent(this);
 	}
+	
+	this->unregister_npc.clear();
 
 	this->online = false;
 

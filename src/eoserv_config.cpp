@@ -285,6 +285,8 @@ void eoserv_config_validate_config(Config& config)
 	eoserv_config_default(config, "LogChatAnnounce"    , false);
 
 	eoserv_config_default(config, "CheckNormalizePasswords", false);
+	eoserv_config_default(config, "Halloween2016", false);
+	eoserv_config_default(config, "Halloween2016Noisy", false);
 }
 
 void eoserv_config_validate_admin(Config& config)
@@ -363,4 +365,5 @@ void eoserv_config_validate_admin(Config& config)
 	eoserv_config_default(config, "seehide"       , 3);
 	eoserv_config_default(config, "cmdprotect"    , 3);
 	eoserv_config_default(config, "unlimitedweight", 3);
+	eoserv_config_default(config, "nezapo"        , 4);
 }

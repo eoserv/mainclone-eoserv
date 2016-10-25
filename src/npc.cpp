@@ -10,6 +10,16 @@
 #include "config.hpp"
 #include "eodata.hpp"
 #include "map.hpp"
+#include "npc_ai.hpp"
+#include "npc_ai/npc_ai_ranged.hpp"
+#include "npc_ai/npc_ai_hw2016_apozen.hpp"
+#include "npc_ai/npc_ai_hw2016_banshee.hpp"
+#include "npc_ai/npc_ai_hw2016_crane.hpp"
+#include "npc_ai/npc_ai_hw2016_cursed_mask.hpp"
+#include "npc_ai/npc_ai_hw2016_dark_magician.hpp"
+#include "npc_ai/npc_ai_hw2016_inferno_grenade.hpp"
+#include "npc_ai/npc_ai_hw2016_skeleton_warlock.hpp"
+#include "npc_ai/npc_ai_hw2016_tentacle.hpp"
 #include "npc_data.hpp"
 #include "packet.hpp"
 #include "party.hpp"
@@ -53,7 +63,6 @@ NPC::NPC(Map *map, short id, unsigned char x, unsigned char y, unsigned char spa
 	this->spawn_x = this->x = x;
 	this->spawn_y = this->y = y;
 	this->alive = false;
-	this->attack = false;
 	this->totaldamage = 0;
 
 	if (spawn_type > 7)
@@ -63,7 +72,6 @@ NPC::NPC(Map *map, short id, unsigned char x, unsigned char y, unsigned char spa
 
 	this->spawn_type = spawn_type;
 	this->spawn_time = spawn_time;
-	this->walk_idle_for = 0;
 
 	if (spawn_type == 7)
 	{
@@ -161,6 +169,11 @@ void NPC::Spawn(NPC *parent)
 	this->hp = this->ENF().hp;
 	this->last_act = Timer::GetTime();
 	this->act_speed = speed_table[this->spawn_type];
+	
+	if (this->map->id >= 286 && this->map->id <= 289 && this->map->world->hw2016_state > 0)
+	{
+		this->hp *= this->map->world->hw2016_monstermod;
+	}
 
 	PacketBuilder builder(PACKET_APPEAR, PACKET_REPLY, 8);
 	builder.AddChar(0);
@@ -178,6 +191,58 @@ void NPC::Spawn(NPC *parent)
 			character->Send(builder);
 		}
 	}
+
+	if (!ai)
+	{
+		if (parent)
+			ai.reset(new NPC_AI_Legacy(this));
+		else
+		{
+			switch (this->id)
+			{
+				case 329:
+					ai.reset(new NPC_AI_HW2016_Apozen(this));
+					break;
+				
+				case 337: // BANSHEE
+					ai.reset(new NPC_AI_HW2016_Banshee(this));
+					break;
+
+				case 342: // CRANE
+					ai.reset(new NPC_AI_HW2016_Crane(this));
+					break;
+
+				case 343: // Cursed mask
+					ai.reset(new NPC_AI_HW2016_Cursed_Mask(this));
+					break;
+
+				case 336: // Dark Magician
+					ai.reset(new NPC_AI_HW2016_Dark_Magician(this));
+					break;
+
+				case 338: // Headless hunter
+					ai.reset(new NPC_AI_Ranged(this));
+					break;
+
+				case 340: // inferno grenade
+					ai.reset(new NPC_AI_HW2016_Inferno_Grenade(this));
+					break;
+
+				case 334: // Skeleton warlock
+					ai.reset(new NPC_AI_HW2016_Skeleton_Warlock(this));
+					break;
+
+				case 341: // Tanktentacle
+					ai.reset(new NPC_AI_HW2016_Tentacle(this));
+					break;
+
+				default:
+					ai.reset(new NPC_AI_Standard(this));
+			}
+		}
+	}
+
+	ai->Spawn();
 }
 
 void NPC::Act()
@@ -202,180 +267,12 @@ void NPC::Act()
 		return;
 	}
 
-	Character *attacker = 0;
-	unsigned char attacker_distance = static_cast<int>(this->map->world->config["NPCChaseDistance"]);
-	unsigned short attacker_damage = 0;
-
-	if (this->ENF().type == ENF::Passive || this->ENF().type == ENF::Aggressive)
-	{
-		UTIL_FOREACH_CREF(this->damagelist, opponent)
-		{
-			if (opponent->attacker->map != this->map || opponent->attacker->nowhere || opponent->last_hit < Timer::GetTime() - static_cast<double>(this->map->world->config["NPCBoredTimer"]))
-			{
-				continue;
-			}
-
-			int distance = util::path_length(opponent->attacker->x, opponent->attacker->y, this->x, this->y);
-
-			if (distance == 0)
-				distance = 1;
-
-			if ((distance < attacker_distance) || (distance == attacker_distance && opponent->damage > attacker_damage))
-			{
-				attacker = opponent->attacker;
-				attacker_damage = opponent->damage;
-				attacker_distance = distance;
-			}
-		}
-
-		if (this->parent)
-		{
-			UTIL_FOREACH_CREF(this->parent->damagelist, opponent)
-			{
-				if (opponent->attacker->map != this->map || opponent->attacker->nowhere || opponent->last_hit < Timer::GetTime() - static_cast<double>(this->map->world->config["NPCBoredTimer"]))
-				{
-					continue;
-				}
-
-				int distance = util::path_length(opponent->attacker->x, opponent->attacker->y, this->x, this->y);
-
-				if (distance == 0)
-					distance = 1;
-
-				if ((distance < attacker_distance) || (distance == attacker_distance && opponent->damage > attacker_damage))
-				{
-					attacker = opponent->attacker;
-					attacker_damage = opponent->damage;
-					attacker_distance = distance;
-				}
-			}
-		}
-	}
-
-	if (this->ENF().type == ENF::Aggressive || (this->parent && attacker))
-	{
-		Character *closest = 0;
-		unsigned char closest_distance = static_cast<int>(this->map->world->config["NPCChaseDistance"]);
-
-		if (attacker)
-		{
-			closest = attacker;
-			closest_distance = std::min(closest_distance, attacker_distance);
-		}
-
-		UTIL_FOREACH(this->map->characters, character)
-		{
-			if (character->IsHideNpc() || !character->CanInteractCombat())
-				continue;
-
-			int distance = util::path_length(character->x, character->y, this->x, this->y);
-
-			if (distance == 0)
-				distance = 1;
-
-			if (distance < closest_distance)
-			{
-				closest = character;
-				closest_distance = distance;
-			}
-		}
-
-		if (closest)
-		{
-			attacker = closest;
-		}
-	}
-	
-	if (attacker)
-	{
-		int xdiff = this->x - attacker->x;
-		int ydiff = this->y - attacker->y;
-		int absxdiff = std::abs(xdiff);
-		int absydiff = std::abs(ydiff);
-
-		if ((absxdiff == 1 && absydiff == 0) || (absxdiff == 0 && absydiff == 1) || (absxdiff == 0 && absydiff == 0))
-		{
-			this->Attack(attacker);
-			return;
-		}
-		else if (absxdiff > absydiff)
-		{
-			if (xdiff < 0)
-			{
-				this->direction = DIRECTION_RIGHT;
-			}
-			else
-			{
-				this->direction = DIRECTION_LEFT;
-			}
-		}
-		else
-		{
-			if (ydiff < 0)
-			{
-				this->direction = DIRECTION_DOWN;
-			}
-			else
-			{
-				this->direction = DIRECTION_UP;
-			}
-		}
-
-		if (this->Walk(this->direction) == Map::WalkFail)
-		{
-			if (this->direction == DIRECTION_UP || this->direction == DIRECTION_DOWN)
-			{
-				if (xdiff < 0)
-				{
-					this->direction = DIRECTION_RIGHT;
-				}
-				else
-				{
-					this->direction = DIRECTION_LEFT;
-				}
-			}
-
-			if (this->Walk(static_cast<Direction>(this->direction)) == Map::WalkFail)
-			{
-				this->Walk(static_cast<Direction>(util::rand(0,3)));
-			}
-		}
-	}
-	else
-	{
-		// Random walking
-
-		int act;
-		if (this->walk_idle_for == 0)
-		{
-			act = util::rand(1,10);
-		}
-		else
-		{
-			--this->walk_idle_for;
-			act = 11;
-		}
-
-		if (act >= 1 && act <= 6) // 60% chance walk foward
-		{
-			this->Walk(this->direction);
-		}
-
-		if (act >= 7 && act <= 9) // 30% change direction
-		{
-			this->Walk(static_cast<Direction>(util::rand(0,3)));
-		}
-
-		if (act == 10) // 10% take a break
-		{
-			this->walk_idle_for = util::rand(1,4);
-		}
-	}
+	if (ai) ai->Act();
 }
 
-bool NPC::Walk(Direction direction)
+bool NPC::Walk(Direction direction, bool playerghost)
 {
-	return this->map->Walk(this, direction);
+	return this->map->Walk(this, direction, playerghost);
 }
 
 void NPC::Damage(Character *from, int amount, int spell_id)
@@ -421,9 +318,11 @@ void NPC::Damage(Character *from, int amount, int spell_id)
 		opponent->attacker = from;
 		opponent->damage = limitamount;
 		opponent->last_hit = Timer::GetTime();
-		opponent->attacker->unregister_npc.push_back(this);
+		opponent->attacker->RegisterNPC(this);
 		this->damagelist.emplace_back(std::move(opponent));
 	}
+
+	if (ai) ai->HitBy(from, spell_id != -1, amount);
 
 	if (this->hp > 0)
 	{
@@ -507,6 +406,12 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 	int most_damage_counter = 0;
 	Character *most_damage = nullptr;
 	NPC_Drop *drop = nullptr;
+
+	if (ai)
+	{
+		if (ai->Dying())
+			return;
+	}
 
 	this->alive = false;
 
@@ -639,6 +544,118 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 	if (drop_winner)
 		this->map->items.back()->owner = drop_winner->PlayerID();
 
+	int is_hw2016 = this->map->id >= 286 && this->map->id <= 288;
+	int is_hw2016_apozen = (this->map->world->config["Halloween2016"] || this->map->id == 289) && this->id == 329;
+	
+	if (is_hw2016 && most_damage)
+		most_damage->hw2016_points += 2;
+	
+	if (is_hw2016_apozen)
+	{
+		int highest_score = -1;
+		Character* highest_scorer = nullptr;
+		int num_chests = 0;
+
+		UTIL_FOREACH(this->map->characters, character)
+		{
+			std::list<std::unique_ptr<NPC_Opponent>>::iterator findopp = this->damagelist.begin();
+			for (; findopp != this->damagelist.end() && (*findopp)->attacker != character; ++findopp); // no loop body
+			
+			if (this->map->id != 289 && findopp == this->damagelist.end())
+				continue;
+			
+			if (this->map->id == 289 && character->hw2016_points > highest_score)
+			{
+				highest_score = character->hw2016_points;
+				highest_scorer = character;
+			}
+
+			character->exp += 1000 + character->hw2016_points * 2;
+			character->exp = std::min(character->exp, static_cast<int>(this->map->world->config["MaxExp"]));
+			
+			bool level_up = false;
+			PacketBuilder builder(spell_id == -1 ? PACKET_NPC : PACKET_CAST, PACKET_SPEC, 26);
+
+			while (character->level < static_cast<int>(this->map->world->config["MaxLevel"]) && character->exp >= this->map->world->exp_table[character->level+1])
+			{
+				level_up = true;
+				++character->level;
+				character->statpoints += static_cast<int>(this->map->world->config["StatPerLevel"]);
+				character->skillpoints += static_cast<int>(this->map->world->config["SkillPerLevel"]);
+				character->CalculateStats();
+			}
+
+			if (level_up)
+			{
+				builder.SetID(spell_id == -1 ? PACKET_NPC : PACKET_CAST, PACKET_ACCEPT);
+				builder.ReserveMore(33);
+			}
+
+			if (spell_id != -1)
+				builder.AddShort(spell_id);
+
+			builder.AddShort(drop_winner ? drop_winner->PlayerID() : from->PlayerID());
+			builder.AddChar(drop_winner ? drop_winner->direction : from->direction);
+			builder.AddShort(this->index);
+			builder.AddShort(dropuid);
+			builder.AddShort(dropid);
+			builder.AddChar(this->x);
+			builder.AddChar(this->y);
+			builder.AddInt(dropamount);
+			builder.AddThree(amount);
+
+			if (spell_id != -1)
+				builder.AddShort(from->tp);
+
+			if ((sharemode == 0 && character == from) || (sharemode != 0 && findopp != this->damagelist.end()))
+			{
+				builder.AddInt(character->exp);
+			}
+
+			if (level_up)
+			{
+				builder.AddChar(character->level);
+				builder.AddShort(character->statpoints);
+				builder.AddShort(character->skillpoints);
+				builder.AddShort(character->maxhp);
+				builder.AddShort(character->maxtp);
+				builder.AddShort(character->maxsp);
+			}
+
+			character->Send(builder);
+			
+			character->ServerMsg("Apozen's assault has been contained! Your score was: " + util::to_string(character->hw2016_points));
+		}
+			
+			
+		UTIL_FOREACH(this->map->characters, character)
+		{
+			if (this->map->id == 289)
+			{
+				if (character == highest_scorer)
+				{
+					num_chests += 3;
+					character->hw2016_chests += 3;
+					character->ServerMsg("You may open three reward chests!");
+				}
+				else
+				{
+					num_chests += 2;
+					character->hw2016_chests += 2;
+					character->ServerMsg("You may open two reward chests.");
+				}
+			}
+		}
+		
+		if (highest_scorer)
+		{
+			UTIL_FOREACH(this->map->characters, character)
+			{
+				character->ServerMsg("Highest score: " + util::ucfirst(highest_scorer->SourceName()) + " (" + util::to_string(highest_score) + ")");
+			}
+		}
+	}
+	else // not indented to make merging easier
 	UTIL_FOREACH(this->map->characters, character)
 	{
 		std::list<std::unique_ptr<NPC_Opponent>>::iterator findopp = this->damagelist.begin();
@@ -664,7 +681,7 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 
 								if (reward > 0)
 								{
-									if (partysharemode)
+									if (partysharemode && !is_hw2016)
 									{
 										if (character->party)
 										{
@@ -678,6 +695,7 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 									else
 									{
 										character->exp += reward;
+										if (is_hw2016) character->hw2016_points += std::min(reward / 5, 1);
 									}
 								}
 							}
@@ -690,9 +708,9 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 
 								if (reward > 0)
 								{
-									if (partysharemode)
+									if (partysharemode && !is_hw2016)
 									{
-										if (character->party)
+										if (character->party && !is_hw2016)
 										{
 											character->party->ShareEXP(reward, partysharemode, this->map);
 										}
@@ -704,6 +722,7 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 									else
 									{
 										character->exp += reward;
+										if (is_hw2016) character->hw2016_points += std::min(reward / 5, 1);
 									}
 								}
 							}
@@ -714,9 +733,9 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 
 							if (reward > 0)
 							{
-								if (partysharemode)
+								if (partysharemode && !is_hw2016)
 								{
-									if (character->party)
+									if (character->party && !is_hw2016)
 									{
 										character->party->temp_expsum += reward;
 										parties.insert(character->party);
@@ -729,6 +748,7 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 								else
 								{
 									character->exp += reward;
+									if (is_hw2016) character->hw2016_points += std::min(reward / 5, 1);
 								}
 							}
 							break;
@@ -738,7 +758,7 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 
 							if (reward > 0)
 							{
-								if (partysharemode)
+								if (partysharemode && !is_hw2016)
 								{
 									if (character->party)
 									{
@@ -752,6 +772,7 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 								else
 								{
 									character->exp += reward;
+									if (is_hw2016) character->hw2016_points += std::min(reward / 5, 1);
 								}
 							}
 							break;
@@ -819,10 +840,8 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 
 	UTIL_FOREACH_CREF(this->damagelist, opponent)
 	{
-		opponent->attacker->unregister_npc.erase(
-			std::remove(UTIL_RANGE(opponent->attacker->unregister_npc), this),
-			opponent->attacker->unregister_npc.end()
-		);
+		opponent->attacker->UnregisterNPC(this);
+		if (ai) ai->Unregister(opponent->attacker);
 	}
 
 	this->damagelist.clear();
@@ -895,16 +914,16 @@ void NPC::Die(bool show)
 	if (!this->alive)
 		return;
 
+	if (ai) ai->Dying();
+
 	this->alive = false;
 	this->parent = 0;
 	this->dead_since = int(Timer::GetTime());
 
 	UTIL_FOREACH_CREF(this->damagelist, opponent)
 	{
-		opponent->attacker->unregister_npc.erase(
-			std::remove(UTIL_RANGE(opponent->attacker->unregister_npc), this),
-			opponent->attacker->unregister_npc.end()
-		);
+		opponent->attacker->UnregisterNPC(this);
+		if (ai) ai->Unregister(opponent->attacker);
 	}
 
 	this->damagelist.clear();
@@ -943,30 +962,95 @@ void NPC::Die(bool show)
 	}
 }
 
-void NPC::Attack(Character *target)
+void NPC::Effect(int effect)
+{
+	this->map->SpellEffect(this->x, this->y, effect);
+}
+
+void NPC::RegisterCharacter(Character* character)
+{
+	character->RegisterNPC(this);
+}
+
+void NPC::UnregisterCharacter(Character* character)
+{
+	this->UnregisterCharacterEvent(character);
+	character->UnregisterNPC(this);
+}
+
+void NPC::UnregisterCharacterEvent(Character* character)
+{
+	std::list<std::unique_ptr<NPC_Opponent>>::iterator findopp = this->damagelist.begin();
+	for (; findopp != this->damagelist.end() && (*findopp)->attacker != character; ++findopp); // no loop body
+	
+	if (findopp != this->damagelist.end())
+	{
+		this->totaldamage -= (*findopp)->damage;
+		this->damagelist.erase(findopp);
+	}
+
+	if (ai) ai->Unregister(character);
+}
+
+void NPC::Attack(Character *target, bool ranged)
 {
 	int amount = util::rand(this->ENF().mindam, this->ENF().maxdam + static_cast<int>(this->map->world->config["NPCAdjustMaxDam"]));
 	double rand = util::rand(0.0, 1.0);
-	// Checks if target is facing you
-	bool critical = std::abs(int(target->direction) - this->direction) != 2 || rand < static_cast<double>(this->map->world->config["CriticalRate"]);
-
-	std::unordered_map<std::string, double> formula_vars;
-
-	this->FormulaVars(formula_vars);
-	target->FormulaVars(formula_vars, "target_");
-	formula_vars["modifier"] = 1.0 / static_cast<double>(this->map->world->config["MobRate"]);
-	formula_vars["damage"] = amount;
-	formula_vars["critical"] = critical;
-
-	amount = rpn_eval(rpn_parse(this->map->world->formulas_config["damage"]), formula_vars);
-	double hit_rate = rpn_eval(rpn_parse(this->map->world->formulas_config["hit_rate"]), formula_vars);
-
-	if (rand > hit_rate)
+	
+	// Halloween 2016 NPC damage formula
+	if (this->id >= 329 && this->id <= 349)
 	{
-		amount = 0;
-	}
+		int mindam = this->ENF().mindam;
+		int maxdam = this->ENF().maxdam;
+		
+		if (this->id == 342 && this->map->world->hw2016_state == 30)
+		{
+			mindam += this->map->world->hw2016_tick;
+			maxdam += this->map->world->hw2016_tick;
+			
+			if (this->map->world->hw2016_tick >= 25)
+			{
+				mindam = 100;
+				maxdam = 100;
+			}
+		}
+		
+		mindam = std::max<int>(target->maxhp * (mindam / 100.0), 1);
+		maxdam = std::max<int>(target->maxhp * (maxdam / 100.0), 1);
+		
+		if (target->shielded_until > Timer::GetTime())
+		{
+			mindam /= 2;
+			maxdam /= 2;
+			mindam = std::max<int>(mindam, 1);
+			maxdam = std::max<int>(maxdam, 1);
+		}
 
-	amount = std::max(amount, 0);
+		amount = util::rand(mindam, maxdam);
+	}
+	else
+	{
+		// Checks if target is facing you
+		bool critical = std::abs(int(target->direction) - this->direction) != 2 || rand < static_cast<double>(this->map->world->config["CriticalRate"]);
+
+		std::unordered_map<std::string, double> formula_vars;
+
+		this->FormulaVars(formula_vars);
+		target->FormulaVars(formula_vars, "target_");
+		formula_vars["modifier"] = 1.0 / static_cast<double>(this->map->world->config["MobRate"]);
+		formula_vars["damage"] = amount;
+		formula_vars["critical"] = critical;
+
+		amount = rpn_eval(rpn_parse(this->map->world->formulas_config["damage"]), formula_vars);
+		double hit_rate = rpn_eval(rpn_parse(this->map->world->formulas_config["hit_rate"]), formula_vars);
+
+		if (rand > hit_rate)
+		{
+			amount = 0;
+		}
+
+		amount = std::max(amount, 0);
+	}
 
 	int limitamount = std::min(amount, int(target->hp));
 
@@ -1039,6 +1123,27 @@ void NPC::Attack(Character *target)
 	target->Send(builder);
 }
 
+void NPC::Say(const std::string& message)
+{
+	PacketBuilder builder(PACKET_NPC, PACKET_PLAYER, 18);
+	builder.AddByte(255);
+	builder.AddByte(255);
+	builder.AddChar(this->index);
+	builder.AddChar(message.length());
+	builder.AddString(message.c_str());
+	builder.AddByte(255);
+
+	UTIL_FOREACH(this->map->characters, character)
+	{
+		if (!character->InRange(this))
+		{
+			continue;
+		}
+
+		character->Send(builder);
+	}
+}
+
 #define v(x) vars[prefix + #x] = x;
 #define vv(x, n) vars[prefix + n] = x;
 #define vd(x) vars[prefix + #x] = data.x;
@@ -1069,9 +1174,7 @@ NPC::~NPC()
 
 	UTIL_FOREACH_CREF(this->damagelist, opponent)
 	{
-		opponent->attacker->unregister_npc.erase(
-			std::remove(UTIL_RANGE(opponent->attacker->unregister_npc), this),
-			opponent->attacker->unregister_npc.end()
-		);
+		opponent->attacker->UnregisterNPC(this);
+		if (ai) ai->Unregister(opponent->attacker);
 	}
 }

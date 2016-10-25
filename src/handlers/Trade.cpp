@@ -7,11 +7,14 @@
 #include "handlers.hpp"
 
 #include "../character.hpp"
+#include "../eoclient.hpp"
 #include "../eodata.hpp"
 #include "../map.hpp"
 #include "../packet.hpp"
+#include "../player.hpp"
 #include "../world.hpp"
 
+#include "../console.hpp"
 #include "../util.hpp"
 
 namespace Handlers
