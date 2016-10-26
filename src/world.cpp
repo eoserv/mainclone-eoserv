@@ -759,7 +759,7 @@ void world_hw2016(void *world_void)
 						int x = util::rand(2, 19);
 						int y = util::rand(2, 20);
 
-						switch (util::rand(0,3))
+						switch (util::rand(0,4))
 						{
 							case 0:
 								spawn_npc(288, x, y, monster_mask, speed_fast);
@@ -783,7 +783,7 @@ void world_hw2016(void *world_void)
 						int x = util::rand(2, 19);
 						int y = util::rand(2, 20);
 
-						switch (util::rand(0,3))
+						switch (util::rand(0,5))
 						{
 							case 0:
 								spawn_npc(288, x, y, monster_mask, speed_fast);
@@ -1625,8 +1625,15 @@ void World::Login(Character *character)
 
 	if (this->GetMap(character->mapid)->relog_x || this->GetMap(character->mapid)->relog_y)
 	{
-		character->x = this->GetMap(character->mapid)->relog_x;
-		character->y = this->GetMap(character->mapid)->relog_y;
+		     if (character->mapid == 286 && this->hw2016_state >=  1 && this->hw2016_state < 20) { }
+		else if (character->mapid == 287 && this->hw2016_state >= 20 && this->hw2016_state < 30) { }
+		else if (character->mapid == 288 && this->hw2016_state >= 30 && this->hw2016_state < 40) { }
+		else if (character->mapid == 289 && this->hw2016_state >= 40) { }
+		else
+		{
+			character->x = this->GetMap(character->mapid)->relog_x;
+			character->y = this->GetMap(character->mapid)->relog_y;
+		}
 	}
 
 	Map* map = this->GetMap(character->mapid);
