@@ -488,7 +488,7 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 
 		int protect_time = static_cast<int>(this->map->world->config["ProtectNPCDrop"]);
 		
-		if (this->id == 450)
+		if (this->id == 350)
 			protect_time = 900;
 		
 		std::shared_ptr<Map_Item> newitem(std::make_shared<Map_Item>(dropuid, dropid, dropamount, this->x, this->y, from->PlayerID(), Timer::GetTime() + protect_time));
