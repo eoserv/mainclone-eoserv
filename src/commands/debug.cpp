@@ -49,6 +49,7 @@ void SpawnItem(const std::vector<std::string>& arguments, Character* from)
 void DropItem(const std::vector<std::string>& arguments, Character* from)
 {
 	if (from->trading) return;
+	if (!from->CanInteractItems()) return;
 
 	int id = util::to_int(arguments[0]);
 	int amount = (arguments.size() >= 2) ? util::to_int(arguments[1]) : 1;
