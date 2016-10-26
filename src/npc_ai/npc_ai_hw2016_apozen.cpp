@@ -35,75 +35,40 @@ bool NPC_AI_HW2016_Apozen::IsInRange(int x, int y, int range) const
 
 void NPC_AI_HW2016_Apozen::Spawn()
 {
-	int speed = 2;
-	int direction = 0;
-
-	for (int i = 0; i < 4; ++i)
-	{
-		unsigned char index = this->npc->map->GenerateNPCIndex();
-
-		if (index > 250)
-			break;
-
-		int xoff, yoff;
-		
-		switch (i)
-		{
-			case 0: xoff =  2; yoff =  2; break;
-			case 1: xoff =  2; yoff = -2; break;
-			case 2: xoff = -2; yoff =  2; break;
-			case 3: xoff = -2; yoff = -2; break;
-		}
-		
-		if (this->npc->map->world->hw2016_spawncount > i)
-		{
-			NPC *npc = new NPC(this->npc->map, 330, this->npc->x + xoff, this->npc->y + yoff, speed, direction, index, true);
-			this->npc->map->npcs.push_back(npc);
-			npc->ai.reset(new NPC_AI_HW2016_ApozenSkull(npc, this->npc));
-			npc->Spawn();
-			
-			this->skull[i] = npc;
-			++num_skulls;
-		}
-	}
+	
 }
 
 bool NPC_AI_HW2016_Apozen::Dying()
 {
+	if (this->npc->map->world->hw2016_dyingapozen)
+		return true;
+
 	for (int i = 0; i < 4; ++i)
 	{
-		if (this->skull[i])
-			this->skull[i]->Die();
+		NPC* skull = this->skull[i];
+		
+		if (skull)
+		{
+			NPC_AI_HW2016_ApozenSkull* skull_ai = static_cast<NPC_AI_HW2016_ApozenSkull*>(skull->ai.get());
+			
+			if (skull_ai)
+			{
+				skull_ai->apozen = nullptr;
+			}
+		}
 	}
-	
-	return false;
+
+	if (!really_die)
+	{
+		this->npc->map->world->hw2016_dyingapozen = this->npc;
+		this->npc->Say("NEXT TIME, MORTALS");
+	}
+
+	return !really_die;
 }
 
 void NPC_AI_HW2016_Apozen::Act()
 {
-	const int monster_imp1 = 347;
-	const int monster_imp2 = 348;
-	const int monster_twin_demon = 349;
-
-	const int speed_fast = 0;
-	const int speed_slow = 2;
-	
-	auto spawn_npc = [&](int mapid, int x, int y, int id, int speed) -> NPC*
-	{
-		Map* map = this->npc->map->world->GetMap(mapid);
-
-		unsigned char index = map->GenerateNPCIndex();
-
-		if (index > 251)
-			return nullptr;
-
-		NPC *npc = new NPC(map, id, x, y, speed, DIRECTION_DOWN, index, true);
-		map->npcs.push_back(npc);
-		npc->Spawn();
-		
-		return npc;
-	};
-
 	this->npc->hw2016_aposhield = (this->npc->map->npcs.size() > (this->num_skulls + 1));
 
 	++this->charging;
@@ -148,7 +113,7 @@ void NPC_AI_HW2016_Apozen::Act()
 				this->chase = 0;
 				this->npc->Effect(3);
 				this->npc->x = util::rand(10,17);
-				this->npc->y = util::rand(5,17) - 1;
+				this->npc->y = util::rand(7,17) - 1;
 				for (int i = 0; i < 4; ++i)
 				{
 					if (this->skull[i])
@@ -179,15 +144,18 @@ void NPC_AI_HW2016_Apozen::Act()
 				// no break!
 
 			case 3: // aoe attack special!
-				this->charging = 200;
-				for (int i = 0; i < 4; ++i)
+				if (this->num_skulls > this->npc->hw2016_apoweak)
 				{
-					if (this->skull[i])
+					this->charging = 200;
+					for (int i = 0; i < 4; ++i)
 					{
-						NPC_AI_HW2016_ApozenSkull* ai = static_cast<NPC_AI_HW2016_ApozenSkull*>(skull[i]->ai.get());
-						
-						if (ai)
-							ai->charging = 200;
+						if (this->skull[i])
+						{
+							NPC_AI_HW2016_ApozenSkull* ai = static_cast<NPC_AI_HW2016_ApozenSkull*>(skull[i]->ai.get());
+							
+							if (ai)
+								ai->charging = 200;
+						}
 					}
 				}
 				break;

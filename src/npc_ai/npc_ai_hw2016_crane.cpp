@@ -24,8 +24,7 @@ NPC_AI_HW2016_Crane::~NPC_AI_HW2016_Crane()
 
 bool NPC_AI_HW2016_Crane::Dying()
 {
-	this->npc->hp = this->npc->ENF().hp;
-	return true;
+	return false;
 }
 
 void NPC_AI_HW2016_Crane::Act()

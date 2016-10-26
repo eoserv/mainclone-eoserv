@@ -63,33 +63,68 @@ NPC* NPC_AI_HW2016_ApozenSkull::PickHealTarget(int range) const
 
 bool NPC_AI_HW2016_ApozenSkull::Dying()
 {
-	for (int i = 0; i < 4; ++i)
-	{
-		if (this->npc->map->world->hw2016_dyingskull[i] == this->npc)
-			break;
+	this->npc->Effect(16);
 
-		if (!this->npc->map->world->hw2016_dyingskull[i])
+	if (this->apozen)
+	{
+		int weak = 0;
+				
+		for (int i = 0; i < 4; ++i)
 		{
-			this->npc->map->world->hw2016_dyingskull[i] = this->npc;
-			break;
+			NPC_AI_HW2016_Apozen* ai = static_cast<NPC_AI_HW2016_Apozen*>(this->apozen->ai.get());
+
+			if (ai && ai->skull[i] == this->npc)
+				ai->skull[i] = nullptr;
+			
+			if (ai && ai->skull[i] == nullptr)
+				++weak;
 		}
+
+		this->apozen->hw2016_apoweak = weak;
+
+		this->npc->map->world->hw2016_dyingskull.push_back({this->npc->x, this->npc->y});
 	}
 
-	return !really_die;
+	return false;
 }
 
 void NPC_AI_HW2016_ApozenSkull::Act()
 {
+	if (!this->apozen)
+		return;
+
 	this->npc->hw2016_aposhield = (apozen->hw2016_aposhield);
 		
 	if (true)
 	{
 		this->target = this->PickTargetRandom();
 		
-		++this->charging;
+		NPC_AI_HW2016_Apozen* apozen_ai = static_cast<NPC_AI_HW2016_Apozen*>(this->apozen->ai.get());
 		
-		if (!this->target)
-			return;
+		if (apozen_ai)
+		{
+			for (int i = 0; i < apozen_ai->num_skulls; ++i)
+			{
+				if (apozen_ai->skull[i])
+				{
+					NPC_AI_HW2016_ApozenSkull* skull_ai = static_cast<NPC_AI_HW2016_ApozenSkull*>(apozen_ai->skull[i]->ai.get());
+					
+					if (skull_ai)
+					{
+						if (skull_ai != this && skull_ai->target == this->target)
+							this->target = nullptr;
+					}
+				}
+			}
+		}
+		
+		if (this->charging < 200)
+		{
+			if (!this->target)
+				return;
+		}
+		
+		++this->charging;
 		
 		if (this->charging >= 204)
 		{

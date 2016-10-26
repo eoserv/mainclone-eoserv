@@ -1307,7 +1307,7 @@ Map::WalkResult Map::Walk(NPC *from, Direction direction, bool playerghost)
 
 	bool adminghost = (from->ENF().type == ENF::Aggressive || from->parent);
 
-	if (!this->Walkable(target_x, target_y, true) || this->Occupied(target_x, target_y, playerghost ? Map::PlayerAndNPC : Map::NPCOnly, adminghost))
+	if (!this->Walkable(target_x, target_y, true) || this->Occupied(target_x, target_y, playerghost ? Map::NPCOnly : Map::PlayerAndNPC, adminghost))
 	{
 		return WalkFail;
 	}
@@ -1540,7 +1540,7 @@ void Map::Attack(Character *from, Direction direction)
 				// Halloween 2016 NPC damage formula
 				if (npc->id >= 329 && npc->id <= 349)
 				{
-					amount = util::rand(120 + from->hw2016_points / 2, static_cast<int>(140 + from->hw2016_points * 2)); // TODO: completion boosts?
+					amount = util::rand(110 + from->hw2016_points / 2, static_cast<int>(140 + from->hw2016_points * 2)); // TODO: completion boosts?
 					
 					if (std::abs(int(npc->direction) - from->direction) != 2)
 						amount *= 1.33;

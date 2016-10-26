@@ -135,7 +135,8 @@ class World
 		int hw2016_nezapo_required = 0;
 		int hw2016_numchests = 0;
 		int hw2016_apospawn = 0;
-		NPC* hw2016_dyingskull[4] = {};
+		std::list<std::pair<int,int>> hw2016_dyingskull;
+		NPC* hw2016_dyingapozen = nullptr;
 		
 		void hw2016_spawn_hallway_row(int row);
 

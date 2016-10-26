@@ -451,8 +451,8 @@ void world_hw2016(void *world_void)
 			world->hw2016_state = 1;
 			world->hw2016_tick = -5;
 			world->hw2016_apospawn = 0;
-			for (int i = 0; i < 4; ++i)
-				world->hw2016_dyingskull[i] = nullptr;
+			world->hw2016_dyingskull.clear();
+			world->hw2016_dyingapozen = nullptr;
 		}
 	}
 	
@@ -856,6 +856,43 @@ void world_hw2016(void *world_void)
 					apozen->Say("YOU DARE BRING LIGHT TO MY LAIR?!");
 				else
 					abort_halloween();
+				
+				NPC_AI_HW2016_Apozen* apozen_ai = static_cast<NPC_AI_HW2016_Apozen*>(apozen->ai.get());
+				
+				// skullz
+				{
+					int speed = speed_fast;
+					int direction = 0;
+
+					for (int i = 0; i < 4; ++i)
+					{
+						unsigned char index = apozen->map->GenerateNPCIndex();
+
+						if (index > 250)
+							break;
+
+						int xoff, yoff;
+						
+						switch (i)
+						{
+							case 0: xoff =  2; yoff =  2; break;
+							case 1: xoff =  2; yoff = -2; break;
+							case 2: xoff = -2; yoff =  2; break;
+							case 3: xoff = -2; yoff = -2; break;
+						}
+						
+						if (world->hw2016_spawncount > i)
+						{
+							NPC *npc = new NPC(apozen->map, 330, apozen->x + xoff, apozen->y + yoff, speed, direction, index, true);
+							apozen->map->npcs.push_back(npc);
+							npc->ai.reset(new NPC_AI_HW2016_ApozenSkull(npc, apozen));
+							npc->Spawn();
+							
+							apozen_ai->skull[i] = npc;
+							++apozen_ai->num_skulls;
+						}
+					}
+				}
 			}
 			else if (world->hw2016_tick == 600)
 			{
@@ -919,6 +956,7 @@ void world_hw2016(void *world_void)
 				world->hw2016_apospawn = 0;
 			}
 			
+			/*
 			for (int i = 0; i < 4; ++i)
 			{
 				if (world->hw2016_dyingskull[i])
@@ -963,10 +1001,60 @@ void world_hw2016(void *world_void)
 						skull_ai->apozen->hw2016_apoweak = weak;
 					}
 					
-					skull_ai->really_die = true;
-					skull->Die();
+					if (skull_ai)
+					{
+						skull->hp = 1;
+						skull_ai->really_die = true;
+						skull->Die();
+					}
+					
 					world->hw2016_dyingskull[i] = nullptr;
 				}	
+			}
+			*/
+			
+			for (auto ice : world->hw2016_dyingskull)
+			{
+				spawn_npc(289, ice.first, ice.second, 297, 7); // dream crystal
+			}
+			
+			world->hw2016_dyingskull.clear();
+			
+			if (world->hw2016_dyingapozen)
+			{
+				NPC* apozen = world->hw2016_dyingapozen;
+				NPC_AI_HW2016_Apozen* apozen_ai = static_cast<NPC_AI_HW2016_Apozen*>(apozen->ai.get());
+				
+				if (apozen_ai)
+				{
+					for (int i = 0; i < 4; ++i)
+					{
+						NPC* skull = apozen_ai->skull[i];
+						
+						if (skull)
+						{
+							skull->Die();
+							apozen_ai->skull[i] = nullptr;
+						}
+					}
+
+					apozen->hp = 1;
+					apozen->Effect(2);
+					apozen_ai->really_die = true;
+
+					UTIL_FOREACH(apozen->map->characters, character)
+					{
+						if (character->InRange(apozen))
+						{
+							apozen->RemoveFromView(character);
+						}
+					}
+
+					apozen->ApozenLoot();
+					apozen->Die(false);
+				}
+				
+				world->hw2016_dyingapozen = nullptr;
 			}
 			
 			if (world->hw2016_tick == 1800)

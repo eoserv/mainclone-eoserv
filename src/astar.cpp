@@ -19,7 +19,7 @@ bool operator <(const AStarCoordPri& a, const AStarCoordPri& b)
 void AStar::SetMaxDistance(int max_distance)
 {
 	int table_width = 2 * max_distance + 1;
-	int max_path_size = 2 * max_distance + 2;
+	int max_path_size = 2 * max_distance + 3;
 	int table_size = table_width * table_width;
 
 	frontier_pri_storage.resize(max_path_size);
@@ -50,8 +50,8 @@ std::deque<std::pair<int,int>> AStar::FindPath(std::pair<int, int> start, std::p
 	auto pri_push = [&](const AStarCoordPri& a)
 	{
 		frontier_pri_storage[frontier_pri_storage_size] = a;
-		std::push_heap(frontier_pri_storage.begin(), frontier_pri_storage.begin() + frontier_pri_storage_size);
 		++frontier_pri_storage_size;
+		std::push_heap(frontier_pri_storage.begin(), frontier_pri_storage.begin() + frontier_pri_storage_size);
 	};
 
 	auto pri_pop = [&]()
@@ -112,7 +112,6 @@ std::deque<std::pair<int,int>> AStar::FindPath(std::pair<int, int> start, std::p
 			std::pair<int, int> nextcoord{current.coord.first + dx, current.coord.second + dy};
 			AStarFrontier& next_info = frontier_info_get(nextcoord);
 			int nextcost = current_info.cost + 1;
-			
 
 			if (!in_range(nextcoord.first, nextcoord.second))
 				continue;
@@ -122,6 +121,9 @@ std::deque<std::pair<int,int>> AStar::FindPath(std::pair<int, int> start, std::p
 
 			if (nextcost < next_info.cost)
 			{
+				if (frontier_pri_storage_size > 2 * max_distance + 1)
+					return {};
+
 				int nextpri = nextcost + util::path_length(nextcoord.first, nextcoord.second, goal.first, goal.second);
 				next_info.cost = nextcost;
 				pri_push(AStarCoordPri{nextcoord, nextpri});

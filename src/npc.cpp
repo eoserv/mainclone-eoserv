@@ -173,7 +173,15 @@ void NPC::Spawn(NPC *parent)
 	if (this->map->id >= 286 && this->map->id <= 289 && this->map->world->hw2016_state > 0)
 	{
 		if (this->id != 350)
-			this->hp *= this->map->world->hw2016_monstermod;
+		{
+			if (this->id == 329)
+				this->hp *= this->map->world->hw2016_monstermod * 2;
+			else if (this->id == 330)
+				this->hp *= this->map->world->hw2016_monstermod * 1.5;
+			else
+				this->hp *= this->map->world->hw2016_monstermod;
+			
+		}
 	}
 	
 	this->peakhp = this->hp;
@@ -560,116 +568,7 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 	
 	if (is_hw2016 && most_damage)
 		most_damage->hw2016_points += 2;
-	
-	if (is_hw2016_apozen)
-	{
-		int highest_score = -1;
-		Character* highest_scorer = nullptr;
-		int num_chests = 0;
 
-		UTIL_FOREACH(this->map->characters, character)
-		{
-			std::list<std::unique_ptr<NPC_Opponent>>::iterator findopp = this->damagelist.begin();
-			for (; findopp != this->damagelist.end() && (*findopp)->attacker != character; ++findopp); // no loop body
-			
-			if (this->map->id != 289 && findopp == this->damagelist.end())
-				continue;
-			
-			if (this->map->id == 289 && character->hw2016_points > highest_score)
-			{
-				highest_score = character->hw2016_points;
-				highest_scorer = character;
-			}
-
-			character->exp += 1000 + character->hw2016_points * 2;
-			character->exp = std::min(character->exp, static_cast<int>(this->map->world->config["MaxExp"]));
-			
-			bool level_up = false;
-			PacketBuilder builder(spell_id == -1 ? PACKET_NPC : PACKET_CAST, PACKET_SPEC, 26);
-
-			while (character->level < static_cast<int>(this->map->world->config["MaxLevel"]) && character->exp >= this->map->world->exp_table[character->level+1])
-			{
-				level_up = true;
-				++character->level;
-				character->statpoints += static_cast<int>(this->map->world->config["StatPerLevel"]);
-				character->skillpoints += static_cast<int>(this->map->world->config["SkillPerLevel"]);
-				character->CalculateStats();
-			}
-
-			if (level_up)
-			{
-				builder.SetID(spell_id == -1 ? PACKET_NPC : PACKET_CAST, PACKET_ACCEPT);
-				builder.ReserveMore(33);
-			}
-
-			if (spell_id != -1)
-				builder.AddShort(spell_id);
-
-			builder.AddShort(drop_winner ? drop_winner->PlayerID() : from->PlayerID());
-			builder.AddChar(drop_winner ? drop_winner->direction : from->direction);
-			builder.AddShort(this->index);
-			builder.AddShort(dropuid);
-			builder.AddShort(dropid);
-			builder.AddChar(this->x);
-			builder.AddChar(this->y);
-			builder.AddInt(dropamount);
-			builder.AddThree(amount);
-
-			if (spell_id != -1)
-				builder.AddShort(from->tp);
-
-			if ((sharemode == 0 && character == from) || (sharemode != 0 && findopp != this->damagelist.end()))
-			{
-				builder.AddInt(character->exp);
-			}
-
-			if (level_up)
-			{
-				builder.AddChar(character->level);
-				builder.AddShort(character->statpoints);
-				builder.AddShort(character->skillpoints);
-				builder.AddShort(character->maxhp);
-				builder.AddShort(character->maxtp);
-				builder.AddShort(character->maxsp);
-			}
-
-			character->Send(builder);
-			
-			character->ServerMsg("Apozen's assault has been contained! Your score was: " + util::to_string(character->hw2016_points));
-		}
-		
-		UTIL_FOREACH(this->map->characters, character)
-		{
-			if (this->map->id == 289)
-			{
-				if (character == highest_scorer)
-				{
-					num_chests += 3;
-					character->hw2016_chests += 3;
-					character->ServerMsg("You may open three reward chests!");
-				}
-				else
-				{
-					num_chests += 2;
-					character->hw2016_chests += 2;
-					character->ServerMsg("You may open two reward chests!");
-				}
-			}
-		}
-		
-		if (highest_scorer)
-		{
-			UTIL_FOREACH(this->map->characters, character)
-			{
-				character->ServerMsg("Highest score: " + util::ucfirst(highest_scorer->SourceName()) + " (" + util::to_string(highest_score) + ")");
-			}
-		}
-
-		this->map->world->hw2016_numchests = num_chests;
-		this->map->world->hw2016_state = 50;
-		this->map->world->hw2016_tick = -5;
-	}
-	else // not indented to make merging easier
 	UTIL_FOREACH(this->map->characters, character)
 	{
 		std::list<std::unique_ptr<NPC_Opponent>>::iterator findopp = this->damagelist.begin();
@@ -973,6 +872,124 @@ void NPC::Die(bool show)
 		);
 
 		delete this;
+	}
+}
+
+void NPC::ApozenLoot()
+{
+	int highest_score = -1;
+	Character* highest_scorer = nullptr;
+	int num_chests = 0;
+
+	UTIL_FOREACH(this->map->characters, character)
+	{
+		std::list<std::unique_ptr<NPC_Opponent>>::iterator findopp = this->damagelist.begin();
+		for (; findopp != this->damagelist.end() && (*findopp)->attacker != character; ++findopp); // no loop body
+		
+		if (this->map->id != 289 && findopp == this->damagelist.end())
+			continue;
+		
+		if (this->map->id == 289 && character->hw2016_points > highest_score)
+		{
+			highest_score = character->hw2016_points;
+			highest_scorer = character;
+		}
+		
+		int exp_reward = this->ENF().exp;
+		
+		if (character->hw2016_points < 10)
+			exp_reward += (character->hw2016_points * character->hw2016_points);
+		else if (character->hw2016_points < 20)
+			exp_reward += 81 + (character->hw2016_points * (character->hw2016_points / 2.0));
+		else if (character->hw2016_points < 30)
+			exp_reward += 261 + (character->hw2016_points * (character->hw2016_points / 4.0));
+		else if (character->hw2016_points < 40)
+			exp_reward += 471 + (character->hw2016_points * (character->hw2016_points / 8.0));
+		else if (character->hw2016_points < 50)
+			exp_reward += 661 + (character->hw2016_points * (character->hw2016_points / 16.0));
+		else if (character->hw2016_points < 60)
+			exp_reward += 811 + (character->hw2016_points * (character->hw2016_points / 32.0));
+		else
+			exp_reward += 919 + character->hw2016_points * 2;
+		
+		{
+			bool level_up = false;
+
+			character->exp += exp_reward;
+			character->exp = std::min(character->exp, int(character->map->world->config["MaxExp"]));
+
+			while (character->level < int(character->map->world->config["MaxLevel"])
+			&& character->exp >= character->map->world->exp_table[character->level+1])
+			{
+				level_up = true;
+				++character->level;
+				character->statpoints += int(character->map->world->config["StatPerLevel"]);
+				character->skillpoints += int(character->map->world->config["SkillPerLevel"]);
+				character->CalculateStats();
+			}
+
+			PacketBuilder builder(PACKET_RECOVER, PACKET_REPLY, 11);
+			builder.AddInt(character->exp);
+			builder.AddShort(character->karma);
+			builder.AddChar(level_up ? character->level : 0);
+
+			if (level_up)
+			{
+				builder.AddShort(character->statpoints);
+				builder.AddShort(character->skillpoints);
+			}
+
+			character->Send(builder);
+
+			if (level_up)
+			{
+				UTIL_FOREACH(character->map->characters, character)
+				{
+					if (character != character && character->InRange(character))
+					{
+						PacketBuilder builder(PACKET_ITEM, PACKET_ACCEPT, 2);
+						builder.AddShort(character->PlayerID());
+						character->Send(builder);
+					}
+				}
+			}
+		}
+
+		character->ServerMsg("Apozen's assault has been contained! Your score was: " + util::to_string(character->hw2016_points) + " (+" + util::to_string(exp_reward) + " EXP)");
+	}
+	
+	UTIL_FOREACH(this->map->characters, character)
+	{
+		if (this->map->id == 289)
+		{
+			if (character == highest_scorer)
+			{
+				num_chests += 3;
+				character->hw2016_chests += 3;
+				character->ServerMsg("You may open three reward chests!");
+			}
+			else
+			{
+				num_chests += 2;
+				character->hw2016_chests += 2;
+				character->ServerMsg("You may open two reward chests!");
+			}
+		}
+	}
+	
+	if (highest_scorer)
+	{
+		UTIL_FOREACH(this->map->characters, character)
+		{
+			character->ServerMsg("Highest score: " + util::ucfirst(highest_scorer->SourceName()) + " (" + util::to_string(highest_score) + ")");
+		}
+	}
+
+	if (this->map->world->hw2016_state >= 40 && this->map->world->hw2016_state < 50)
+	{
+		this->map->world->hw2016_numchests = num_chests;
+		this->map->world->hw2016_state = 50;
+		this->map->world->hw2016_tick = -5;
 	}
 }
 

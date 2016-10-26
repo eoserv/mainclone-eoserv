@@ -79,6 +79,7 @@ class NPC
 		void RemoveFromView(Character *target);
 		void Killed(Character *from, int amount, int spell_id = -1);
 		void Die(bool show = true);
+		void ApozenLoot();
 		void Effect(int effect);
 		
 		// Called by the AI in some cases when a character should be (un)registered explicitly/early for a logout event

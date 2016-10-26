@@ -18,10 +18,11 @@ class NPC_AI_HW2016_ApozenSkull;
 class NPC_AI_HW2016_Apozen : public NPC_AI_Standard
 {
 	public:
+		int num_skulls;
 		NPC* skull[4];
+		bool really_die = false;
 	
 	protected:
-		int num_skulls;
 		int charging;
 		int chase;
 		int spawn_cooldown = 1;
