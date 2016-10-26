@@ -128,7 +128,7 @@ void NPC_AI_HW2016_Apozen::Act()
 						
 					this->charging = -15;
 					
-					this->spawn_cooldown = 1;
+					this->spawn_cooldown = 2;
 				}
 				break;
 
@@ -140,7 +140,7 @@ void NPC_AI_HW2016_Apozen::Act()
 
 					this->charging = -15;
 					
-					this->spawn_cooldown = 1;
+					this->spawn_cooldown = 2;
 				}
 				break;
 
