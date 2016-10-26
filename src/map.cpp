@@ -931,6 +931,16 @@ Map::WalkResult Map::Walk(Character *from, Direction direction, bool admin)
 
 		if (this->Occupied(target_x, target_y, PlayerOnly) && (from->last_walk + double(this->world->config["GhostTimer"]) > Timer::GetTime()))
 			return WalkFail;
+		
+		// Halloween 2016 - anti tent ghosting
+		if (this->id == 287)
+		{
+			UTIL_FOREACH(this->npcs, npc)
+			{
+				if (npc->id == 341 && npc->alive && npc->x == target_x && npc->y == target_y)
+					return WalkFail;
+			}
+		}
 	}
 
 	const Map_Warp& warp = this->GetWarp(target_x, target_y);
