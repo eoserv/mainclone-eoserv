@@ -670,10 +670,10 @@ void world_hw2016(void *world_void)
 				world->hw2016_state = 21;
 				world->hw2016_tick = -5;
 				
-				for (int i = 0; i < 20; ++i)
+				for (int i = 0; i < 10; ++i)
 				{
 					int x = util::rand(4, 19);
-					int y = util::rand(86, 94);
+					int y = util::rand(88, 94);
 
 					spawn_npc(287, x, y, monster_crane, speed_veryfast);
 				}

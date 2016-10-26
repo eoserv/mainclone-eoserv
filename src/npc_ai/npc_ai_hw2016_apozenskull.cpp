@@ -132,7 +132,7 @@ void NPC_AI_HW2016_ApozenSkull::Act()
 			this->npc->map->SpellAttackNPC(this->npc, this->target, 10);
 			this->charging = -5;
 		}
-		else if (this->charging == 0)
+		else if (this->charging >= 0 && this->charging < 100)
 		{
 			int r = util::rand(0,3);
 			

@@ -1530,7 +1530,10 @@ void Map::Attack(Character *from, Direction direction)
 				// Halloween 2016 NPC damage formula
 				if (npc->id >= 329 && npc->id <= 349)
 				{
-					amount = util::rand(130 + from->hw2016_points / 2, static_cast<int>(140 + from->hw2016_points * 2)); // TODO: completion boosts?
+					amount = util::rand(120 + from->hw2016_points / 2, static_cast<int>(140 + from->hw2016_points * 3)); // TODO: completion boosts?
+					
+					if (std::abs(int(npc->direction) - from->direction) != 2)
+						amount *= 1.33;
 					
 					if (npc->hw2016_aposhield)
 					{
@@ -1556,7 +1559,7 @@ void Map::Attack(Character *from, Direction direction)
 				{
 					if (from->hw2016_chests > 0)
 					{
-						amount = 1;
+						amount = npc->hp;
 						--from->hw2016_chests;
 					}
 					else
@@ -2028,7 +2031,7 @@ void Map::SpellAttack(Character *from, NPC *victim, unsigned short spell_id)
 		{
 			if (from->hw2016_chests > 0)
 			{
-				amount = 1;
+				amount = victim->hp;
 				--from->hw2016_chests;
 			}
 			else

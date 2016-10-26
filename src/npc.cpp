@@ -166,13 +166,16 @@ void NPC::Spawn(NPC *parent)
 	}
 
 	this->alive = true;
-	this->hp = this->ENF().hp;
+	this->peakhp = this->hp = this->ENF().hp;
+	if (this->peakhp == 0)
+		this->peakhp = 1;
 	this->last_act = Timer::GetTime();
 	this->act_speed = speed_table[this->spawn_type];
 	
 	if (this->map->id >= 286 && this->map->id <= 289 && this->map->world->hw2016_state > 0)
 	{
-		this->hp *= this->map->world->hw2016_monstermod;
+		if (this->id != 350)
+			this->hp *= this->map->world->hw2016_monstermod;
 	}
 
 	PacketBuilder builder(PACKET_APPEAR, PACKET_REPLY, 8);
@@ -335,7 +338,7 @@ void NPC::Damage(Character *from, int amount, int spell_id)
 		builder.AddChar(from->direction);
 		builder.AddShort(this->index);
 		builder.AddThree(amount);
-		builder.AddShort(util::clamp<int>(double(this->hp) / double(this->ENF().hp) * 100.0, 0, 100));
+		builder.AddShort(util::clamp<int>(double(this->hp) / double(this->peakhp) * 100.0, 0, 100));
 
 		if (spell_id != -1)
 			builder.AddShort(from->tp);

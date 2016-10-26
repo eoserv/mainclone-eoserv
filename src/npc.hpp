@@ -47,6 +47,7 @@ class NPC
 		double last_act;
 		double act_speed;
 		int hp;
+		int peakhp = 1;
 		int totaldamage;
 		std::list<std::unique_ptr<NPC_Opponent>> damagelist;
 
