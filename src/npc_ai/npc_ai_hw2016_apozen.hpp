@@ -24,6 +24,7 @@ class NPC_AI_HW2016_Apozen : public NPC_AI_Standard
 		int num_skulls;
 		int charging;
 		int chase;
+		int spawn_cooldown = 1;
 		bool IsInRange(int x, int y, int range) const;
 
 	public:

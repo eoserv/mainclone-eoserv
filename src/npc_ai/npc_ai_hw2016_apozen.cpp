@@ -35,7 +35,7 @@ bool NPC_AI_HW2016_Apozen::IsInRange(int x, int y, int range) const
 
 void NPC_AI_HW2016_Apozen::Spawn()
 {
-	int speed = 3;
+	int speed = 2;
 	int direction = 0;
 
 	for (int i = 0; i < 4; ++i)
@@ -121,28 +121,27 @@ void NPC_AI_HW2016_Apozen::Act()
 		switch (util::rand(0,4))
 		{
 			case 0: // summon imps
-				if (!this->npc->hw2016_aposhield)
+				if (!this->npc->hw2016_aposhield && --this->spawn_cooldown <= 0)
 				{
 					this->npc->Say("ARISE");
 					this->npc->map->world->hw2016_apospawn = 1;
 						
-					this->charging = -30;
-				}
-				else
 					this->charging = -15;
-
+					
+					this->spawn_cooldown = 1;
+				}
 				break;
 
 			case 1: // summon demons
-				if (!this->npc->hw2016_aposhield)
+				if (!this->npc->hw2016_aposhield && --this->spawn_cooldown <= 0)
 				{
 					this->npc->Say("ARISE");
 					this->npc->map->world->hw2016_apospawn = 2;
 
-					this->charging = -30;
-				}
-				else
 					this->charging = -15;
+					
+					this->spawn_cooldown = 1;
+				}
 				break;
 
 			case 2: // teleport

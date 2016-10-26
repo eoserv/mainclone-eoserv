@@ -166,9 +166,7 @@ void NPC::Spawn(NPC *parent)
 	}
 
 	this->alive = true;
-	this->peakhp = this->hp = this->ENF().hp;
-	if (this->peakhp == 0)
-		this->peakhp = 1;
+	this->hp = this->ENF().hp;
 	this->last_act = Timer::GetTime();
 	this->act_speed = speed_table[this->spawn_type];
 	
@@ -177,6 +175,11 @@ void NPC::Spawn(NPC *parent)
 		if (this->id != 350)
 			this->hp *= this->map->world->hw2016_monstermod;
 	}
+	
+	this->peakhp = this->hp;
+
+	if (this->peakhp == 0)
+		this->peakhp = 1;
 
 	PacketBuilder builder(PACKET_APPEAR, PACKET_REPLY, 8);
 	builder.AddChar(0);
@@ -1020,12 +1023,6 @@ void NPC::Attack(Character *target, bool ranged)
 		{
 			mindam += this->map->world->hw2016_tick;
 			maxdam += this->map->world->hw2016_tick;
-			
-			if (this->map->world->hw2016_tick >= 25)
-			{
-				mindam = 100;
-				maxdam = 100;
-			}
 		}
 		
 		mindam = std::max<int>(target->maxhp * (mindam / 100.0), 1);

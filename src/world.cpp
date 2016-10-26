@@ -741,9 +741,6 @@ void world_hw2016(void *world_void)
 						spawn_npc(288, x, y, monster_puppet, speed_slow);
 					}
 
-				clear_map_characters(287);
-				clear_map_npcs(287);
-
 				world->hw2016_state = 31;
 				world->hw2016_tick = -5;
 			}
@@ -812,6 +809,9 @@ void world_hw2016(void *world_void)
 			
 			if (world->hw2016_tick > 180 && world->maps[288-1]->npcs.size() == 0)
 			{
+				clear_map_characters(287);
+				clear_map_npcs(287);
+
 				clear_map_npcs(289);
 
 				world->hw2016_state = 40;
@@ -1626,7 +1626,7 @@ void World::Login(Character *character)
 	if (this->GetMap(character->mapid)->relog_x || this->GetMap(character->mapid)->relog_y)
 	{
 		     if (character->mapid == 286 && this->hw2016_state >=  1 && this->hw2016_state < 20) { }
-		else if (character->mapid == 287 && this->hw2016_state >= 20 && this->hw2016_state < 30) { }
+		else if (character->mapid == 287 && this->hw2016_state >= 20 && this->hw2016_state < 40) { }
 		else if (character->mapid == 288 && this->hw2016_state >= 30 && this->hw2016_state < 40) { }
 		else if (character->mapid == 289 && this->hw2016_state >= 40) { }
 		else

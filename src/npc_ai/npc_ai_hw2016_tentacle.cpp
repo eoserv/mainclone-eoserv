@@ -33,7 +33,7 @@ void NPC_AI_HW2016_Tentacle::Act()
 	Character* attacker = this->PickTargetRandomMD();
 	
 	if (!attacker)
-		attacker = this->PickTargetRandom();
+		attacker = this->PickTargetRandomRange();
 	
 	if (this->target != attacker)
 	{

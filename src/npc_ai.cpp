@@ -200,6 +200,42 @@ Character* NPC_AI_Legacy::PickTargetRandom() const
 	return nullptr;
 }
 
+Character* NPC_AI_Legacy::PickTargetRandomRange(int range) const
+{
+	int i = 0;
+	int count = 0;
+	
+	UTIL_FOREACH(this->npc->map->characters, character)
+	{
+		if (character->IsHideNpc() || !character->CanInteractCombat())
+			continue;
+
+		if (util::path_length(character->x, character->y, this->npc->x, this->npc->y) > range)
+			continue;
+		
+		++count;
+	}
+	
+	if (count == 0)
+		return nullptr;
+	
+	int r = util::rand(0, count - 1);
+	
+	UTIL_FOREACH(this->npc->map->characters, character)
+	{
+		if (character->IsHideNpc() || !character->CanInteractCombat())
+			continue;
+
+		if (util::path_length(character->x, character->y, this->npc->x, this->npc->y) > range)
+			continue;
+
+		if (i == r)
+			return character;
+	}
+	
+	return nullptr;
+}
+
 Character* NPC_AI_Legacy::PickTargetRandomMD() const
 {
 	int i = 0;

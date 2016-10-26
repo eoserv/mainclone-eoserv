@@ -45,6 +45,7 @@ class NPC_AI_Legacy : public NPC_AI
 	protected:
 		Character* PickTarget(bool legacy = true) const;
 		Character* PickTargetRandom() const;
+		Character* PickTargetRandomRange(int range = 8) const;
 		Character* PickTargetRandomMD() const;
 		bool IsNextTo(int x, int y) const;
 		void DumbChase(int x, int y);
