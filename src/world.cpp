@@ -1716,7 +1716,11 @@ void World::Login(Character *character)
 		     if (character->mapid == 286 && this->hw2016_state >=  1 && this->hw2016_state < 20) { }
 		else if (character->mapid == 287 && this->hw2016_state >= 20 && this->hw2016_state < 40) { }
 		else if (character->mapid == 288 && this->hw2016_state >= 30 && this->hw2016_state < 40) { }
-		else if (character->mapid == 289 && this->hw2016_state >= 40) { }
+		else if (character->mapid == 289 && this->hw2016_state >= 40)
+		{
+			if (this->hw2016_state == 50)
+				character->hw2016_chests = 2;
+		}
 		else
 		{
 			character->x = this->GetMap(character->mapid)->relog_x;

@@ -146,7 +146,7 @@ void NPC_AI_HW2016_ApozenSkull::Act()
 			
 			for (Character* c : burned)
 			{
-				int hit = c->maxhp * 0.1;
+				int hit = c->maxhp * 0.2;
 				
 				if (hit > c->hp)
 					hit = c->hp - 1;

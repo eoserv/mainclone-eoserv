@@ -2197,6 +2197,13 @@ void Character::Logout()
 	}
 	
 	this->unregister_npc.clear();
+	
+	if (this->mapid == 289 && this->world->hw2016_state == 50 && this->hw2016_chests < 2)
+	{
+		this->mapid == 5;
+		this->x = 40;
+		this->y = 40;
+	}
 
 	this->online = false;
 

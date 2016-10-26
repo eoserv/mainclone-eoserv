@@ -175,9 +175,9 @@ void NPC::Spawn(NPC *parent)
 		if (this->id != 350)
 		{
 			if (this->id == 329)
-				this->hp *= this->map->world->hw2016_monstermod * 2;
+				this->hp *= this->map->world->hw2016_monstermod * 3;
 			else if (this->id == 330)
-				this->hp *= this->map->world->hw2016_monstermod * 1.5;
+				this->hp *= this->map->world->hw2016_monstermod * 2;
 			else
 				this->hp *= this->map->world->hw2016_monstermod;
 			

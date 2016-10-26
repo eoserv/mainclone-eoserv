@@ -64,7 +64,7 @@ void NPC_AI_HW2016_Inferno_Grenade::Act()
 		
 		for (Character* c : burned)
 		{
-			int hit = c->maxhp * 0.2;
+			int hit = c->maxhp * 0.3;
 			
 			if (hit > c->hp)
 				hit = c->hp - 1;
