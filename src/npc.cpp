@@ -943,13 +943,13 @@ void NPC::ApozenLoot()
 
 			if (level_up)
 			{
-				UTIL_FOREACH(character->map->characters, character)
+				for (auto c : character->map->characters)
 				{
-					if (character != character && character->InRange(character))
+					if (c != character && character->InRange(c))
 					{
 						PacketBuilder builder(PACKET_ITEM, PACKET_ACCEPT, 2);
 						builder.AddShort(character->PlayerID());
-						character->Send(builder);
+						c->Send(builder);
 					}
 				}
 			}
