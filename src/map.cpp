@@ -742,7 +742,9 @@ void Map::Enter(Character *character, WarpAnimation animation)
 	character->last_walk = Timer::GetTime();
 	character->attacks = 0;
 	
-	character->hw2016_chests = 0;
+	// Leaving apozen ultimus lair - gross huh
+	if (this->id == 5)
+		character->hw2016_chests = 0;
 	
 	if (character->world->hw2016_state == 21 && this->id == 288)
 	{
@@ -1233,12 +1235,8 @@ Map::WalkResult Map::Walk(Character *from, Direction direction, bool admin)
 	// Halloween 2016 event hallway trigger
 	if (this->id == 287 && this->world->hw2016_state >= 20 && this->world->hw2016_state < 30)
 	{
-		Console::Dbg("world->hw2016_hallway_spawnrow = %d", world->hw2016_hallway_spawnrow);
-		Console::Dbg("target_y = %d", target_y);
-		Console::Dbg("target_y must be %d", world->hw2016_hallway_spawnrow + 1);
 		if (world->hw2016_hallway_spawnrow > 42 && target_y == world->hw2016_hallway_spawnrow + 1)
 		{
-			Console::Dbg("We're doing it manual!");
 			world->hw2016_hallway_spawnrow -= 4;
 			world->hw2016_spawn_hallway_row(world->hw2016_hallway_spawnrow);
 		}
@@ -1532,7 +1530,16 @@ void Map::Attack(Character *from, Direction direction)
 				// Halloween 2016 NPC damage formula
 				if (npc->id >= 329 && npc->id <= 349)
 				{
-					amount = util::rand(90 + from->hw2016_points / 2, static_cast<int>(110 + from->hw2016_points * 2 * this->world->hw2016_monstermod)); // TODO: completion boosts?
+					amount = util::rand(130 + from->hw2016_points / 2, static_cast<int>(140 + from->hw2016_points * 2 * this->world->hw2016_monstermod)); // TODO: completion boosts?
+					
+					if (npc->hw2016_aposhield)
+					{
+						npc->Effect(32);
+						amount /= 10;
+					}
+					
+					amount *= 1 + (npc->hw2016_apoweak * npc->hw2016_apoweak);
+					
 					double rand = util::rand(0.0, 1.0);
 					double hit_rate = ((100.0 - npc->ENF().evade) / 100.0);
 					
@@ -1996,6 +2003,15 @@ void Map::SpellAttack(Character *from, NPC *victim, unsigned short spell_id)
 		if (victim->id >= 329 && victim->id <= 349)
 		{
 			amount = util::rand(90*spell.cast_time + spell.mindam*2, 110*spell.cast_time + spell.maxdam*2); // TODO: Apply kill / completion boosts
+			
+			if (victim->hw2016_aposhield)
+			{
+				victim->Effect(32);
+				amount /= 10;
+			}
+			
+			amount *= 1 + (victim->hw2016_apoweak * victim->hw2016_apoweak);
+			
 			double rand = util::rand(0.0, 1.0);
 			double hit_rate = ((100.0 - victim->ENF().evade) / 100.0);
 			
@@ -2224,7 +2240,7 @@ void Map::SpellAttackNPC(NPC *from, Character *victim, unsigned short spell_id)
 		// Halloween 2016 healing spell scaling
 		if (from->map->id >= 286 && from->map->id <= 289)
 		{
-			amount = std::max<int>(victim->maxhp * (from->ENF().maxdam * 1.5 / 100.0), 1);
+			amount = std::max<int>(victim->maxhp * (from->ENF().maxdam * 2 / 100.0), 1);
 		}
 
 		amount = std::max(amount, 1);

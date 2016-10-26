@@ -19,7 +19,7 @@
 
 NPC_AI_HW2016_Inferno_Grenade::NPC_AI_HW2016_Inferno_Grenade(NPC* npc)
 	: NPC_AI_Standard(npc)
-	, charging(-40)
+	, charging(-20)
 { }
 
 NPC_AI_HW2016_Inferno_Grenade::~NPC_AI_HW2016_Inferno_Grenade()
@@ -64,10 +64,13 @@ void NPC_AI_HW2016_Inferno_Grenade::Act()
 		
 		for (Character* c : burned)
 		{
-			c->SpikeDamage(c->maxhp * 0.4);
+			int hit = c->maxhp * 0.2;
 			
-			if (c->hp < 0)
-				c->DeathRespawn();
+			if (hit > c->hp)
+				hit = c->hp - 1;
+
+			if (hit > 0)
+				c->SpikeDamage(hit);
 		}
 		
 		this->npc->Die();

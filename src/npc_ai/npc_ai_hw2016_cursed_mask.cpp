@@ -60,7 +60,7 @@ void NPC_AI_HW2016_Cursed_Mask::Act()
 						this->npc->Effect(29);
 						this->charging = 100;
 						break;
-					case 3:
+					case 2:
 						this->charging = -2;
 
 						if (this->IsNextTo(this->target->x, this->target->y))

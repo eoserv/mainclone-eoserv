@@ -59,6 +59,9 @@ class NPC
 		std::unique_ptr<NPC_AI> ai;
 
 		int id;
+		
+		int hw2016_aposhield = 0;
+		int hw2016_apoweak = 0;
 
 		static void SetSpeedTable(std::array<double, 7> speeds);
 

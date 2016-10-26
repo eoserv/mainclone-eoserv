@@ -170,7 +170,7 @@ void NPC_AI_Ranged::Act()
 
 	if (this->target)
 	{		
-		if (this->IsInStraightRange(this->target->x, this->target->y, 6))
+		if (this->IsInStraightRange(this->target->x, this->target->y, 5))
 		{
 			this->npc->Attack(this->target);
 		}

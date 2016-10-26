@@ -15,15 +15,18 @@ class NPC_AI_HW2016_ApozenSkull : public NPC_AI_Standard
 {
 	protected:
 		int charging;
+		NPC* apozen;
 		bool IsInRange(int x, int y, int range) const;
 		NPC* PickHealTarget(int range) const;
 
 	public:
-		NPC_AI_HW2016_ApozenSkull(NPC* npc);
+		NPC_AI_HW2016_ApozenSkull(NPC* npc, NPC* apozen);
 		~NPC_AI_HW2016_ApozenSkull();
 
 		virtual bool Dying();
 		virtual void Act();
+	
+	friend class NPC_AI_HW2016_Apozen;
 };
 
 #endif // NPC_AI_HW2016_APOZENSKULL_HPP_INCLUDED

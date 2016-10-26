@@ -112,9 +112,41 @@ void Shutdown(const std::vector<std::string>& arguments, Command_Source* from)
 
 void ForceHW2016(const std::vector<std::string>& arguments, Command_Source* from)
 {
-	(void)arguments;
+	World* world = from->SourceWorld();
 
-	from->SourceWorld()->hw2016_hour = 0;
+	if (arguments.size() >= 1)
+	{
+		int state = util::to_int(arguments[0]);
+		int tick = -5;
+		
+		if (arguments.size() >= 2)
+			tick = util::to_int(arguments[1]);
+		
+		if (world->hw2016_state <= 1)
+		{
+			int pc = world->maps[286-1]->characters.size() + world->maps[287-1]->characters.size() + world->maps[288-1]->characters.size() + world->maps[289-1]->characters.size();
+
+			world->hw2016_spawncount = std::min<int>((pc + 1) / 2, 5);
+			world->hw2016_monstermod = 1.0 + std::max<int>(pc - 10, 0) * 0.1;
+			
+			if (world->maps[286-1]->characters.size() == 1)
+				world->maps[286-1]->characters.front()->hw2016_points = 50;
+			
+			if (pc == 2)
+				world->hw2016_monstermod = 1.5;
+			else if (pc == 4)
+				world->hw2016_monstermod = 1.3;
+			else if (pc == 6)
+				world->hw2016_monstermod = 1.2;
+			else if (pc == 8)
+				world->hw2016_monstermod = 1.15;
+		}
+		
+		world->hw2016_state = state;
+		world->hw2016_tick = tick;
+	}
+	else
+		world->hw2016_hour = 0;
 }
 
 void Uptime(const std::vector<std::string>& arguments, Command_Source* from)
@@ -139,7 +171,7 @@ COMMAND_HANDLER_REGISTER(server)
 	Register({"request", {}, {}, 3}, ReloadQuest);
 	Register({"shutdown", {}, {}, 8}, Shutdown);
 	Register({"uptime"}, Uptime);
-	Register({"nezapo"}, ForceHW2016);
+	Register({"nezapo", {}, {"state", "tick"}, 6}, ForceHW2016);
 	RegisterCharacter({"mods=gods", {}, {}, 9}, AdminSecret);
 COMMAND_HANDLER_REGISTER_END(server)
 

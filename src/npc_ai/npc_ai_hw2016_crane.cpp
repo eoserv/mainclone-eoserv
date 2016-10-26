@@ -40,12 +40,12 @@ void NPC_AI_HW2016_Crane::Act()
 	{
 		if (this->npc->map->world->hw2016_hallway <= 40)
 		{
-			if (this->npc->y == 84 - this->npc->map->world->hw2016_hallway)
+			if (this->npc->y == 86 - this->npc->map->world->hw2016_hallway)
 			{
 				if (!this->npc->Walk(DIRECTION_DOWN))
 					this->RandomWalk();
 			}
-			else if (this->npc->y > 88 - this->npc->map->world->hw2016_hallway)
+			else if (this->npc->y > 90 - this->npc->map->world->hw2016_hallway)
 			{
 				if (!this->npc->Walk(DIRECTION_UP))
 					this->RandomWalk();

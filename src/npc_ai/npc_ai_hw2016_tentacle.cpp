@@ -30,7 +30,10 @@ bool NPC_AI_HW2016_Tentacle::IsInRange(int x, int y, int range) const
 
 void NPC_AI_HW2016_Tentacle::Act()
 {
-	Character* attacker = this->PickTarget();
+	Character* attacker = this->PickTargetRandomMD();
+	
+	if (!attacker)
+		attacker = this->PickTargetRandom();
 	
 	if (this->target != attacker)
 	{
@@ -57,7 +60,7 @@ void NPC_AI_HW2016_Tentacle::Act()
 			{
 				this->charging = 100;
 				
-				if (util::rand(0, 400) == 69)
+				if (util::rand(0, 300) == 69)
 					this->npc->Say("I know you've seen enough hentai to know where this is going");
 			}
 		}

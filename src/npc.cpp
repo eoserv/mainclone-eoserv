@@ -626,34 +626,9 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 			
 			character->ServerMsg("Apozen's assault has been contained! Your score was: " + util::to_string(character->hw2016_points));
 		}
-			
-			
-		UTIL_FOREACH(this->map->characters, character)
-		{
-			if (this->map->id == 289)
-			{
-				if (character == highest_scorer)
-				{
-					num_chests += 3;
-					character->hw2016_chests += 3;
-					character->ServerMsg("You may open three reward chests!");
-				}
-				else
-				{
-					num_chests += 2;
-					character->hw2016_chests += 2;
-					character->ServerMsg("You may open two reward chests.");
-				}
-			}
-		}
-		
-		if (highest_scorer)
-		{
-			UTIL_FOREACH(this->map->characters, character)
-			{
-				character->ServerMsg("Highest score: " + util::ucfirst(highest_scorer->SourceName()) + " (" + util::to_string(highest_score) + ")");
-			}
-		}
+
+		this->map->world->hw2016_numchests = num_chests;
+		this->map->world->hw2016_state = 50;
 	}
 	else // not indented to make merging easier
 	UTIL_FOREACH(this->map->characters, character)
@@ -695,7 +670,7 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 									else
 									{
 										character->exp += reward;
-										if (is_hw2016) character->hw2016_points += std::min(reward / 5, 1);
+										if (is_hw2016) character->hw2016_points += std::min(reward / 2, 1);
 									}
 								}
 							}
@@ -722,7 +697,7 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 									else
 									{
 										character->exp += reward;
-										if (is_hw2016) character->hw2016_points += std::min(reward / 5, 1);
+										if (is_hw2016) character->hw2016_points += std::min(reward / 2, 1);
 									}
 								}
 							}
@@ -748,7 +723,7 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 								else
 								{
 									character->exp += reward;
-									if (is_hw2016) character->hw2016_points += std::min(reward / 5, 1);
+									if (is_hw2016) character->hw2016_points += std::min(reward / 2, 1);
 								}
 							}
 							break;
@@ -772,7 +747,7 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 								else
 								{
 									character->exp += reward;
-									if (is_hw2016) character->hw2016_points += std::min(reward / 5, 1);
+									if (is_hw2016) character->hw2016_points += std::min(reward / 2, 1);
 								}
 							}
 							break;
@@ -1002,6 +977,8 @@ void NPC::Attack(Character *target, bool ranged)
 	{
 		int mindam = this->ENF().mindam;
 		int maxdam = this->ENF().maxdam;
+		
+		maxdam += this->hw2016_apoweak * 2;
 		
 		if (this->id == 342 && this->map->world->hw2016_state == 30)
 		{

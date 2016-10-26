@@ -170,6 +170,76 @@ Character* NPC_AI_Legacy::PickTarget(bool legacy) const
 	return attacker;
 }
 
+Character* NPC_AI_Legacy::PickTargetRandom() const
+{
+	int i = 0;
+	int count = 0;
+	
+	UTIL_FOREACH(this->npc->map->characters, character)
+	{
+		if (character->IsHideNpc() || !character->CanInteractCombat())
+			continue;
+
+		++count;
+	}
+	
+	if (count == 0)
+		return nullptr;
+	
+	int r = util::rand(0, count - 1);
+	
+	UTIL_FOREACH(this->npc->map->characters, character)
+	{
+		if (character->IsHideNpc() || !character->CanInteractCombat())
+			continue;
+
+		if (i == r)
+			return character;
+	}
+	
+	return nullptr;
+}
+
+Character* NPC_AI_Legacy::PickTargetRandomMD() const
+{
+	int i = 0;
+	int count = 0;
+	
+	UTIL_FOREACH(this->npc->map->characters, character)
+	{
+		if (character->IsHideNpc() || !character->CanInteractCombat())
+			continue;
+
+		int distance = util::path_length(character->x, character->y, this->npc->x, this->npc->y);
+		
+		if (distance > 1)
+			continue;
+		
+		++count;
+	}
+	
+	if (count == 0)
+		return nullptr;
+	
+	int r = util::rand(0, count - 1);
+	
+	UTIL_FOREACH(this->npc->map->characters, character)
+	{
+		if (character->IsHideNpc() || !character->CanInteractCombat())
+			continue;
+
+		int distance = util::path_length(character->x, character->y, this->npc->x, this->npc->y);
+		
+		if (distance > 1)
+			continue;
+
+		if (i == r)
+			return character;
+	}
+	
+	return nullptr;
+}
+
 bool NPC_AI_Legacy::IsNextTo(int x, int y) const
 {
 	return util::path_length(this->npc->x, this->npc->y, x, y) <= 1;

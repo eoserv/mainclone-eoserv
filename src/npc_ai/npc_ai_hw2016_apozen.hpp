@@ -13,28 +13,27 @@
 
 #include <memory>
 
+class NPC_AI_HW2016_ApozenSkull;
+
 class NPC_AI_HW2016_Apozen : public NPC_AI_Standard
 {
-	private:
-		class Persist
-		{
-			int timed_spawned;
-		};
-		
-		static std::unique_ptr<Persist> persist;
-
 	protected:
 		NPC* skull[4];
+		int num_skulls;
 		int charging;
+		int chase;
 		bool IsInRange(int x, int y, int range) const;
 
 	public:
 		NPC_AI_HW2016_Apozen(NPC* npc);
 		~NPC_AI_HW2016_Apozen();
+		void SmartChase(Character* attacker, int range = 0);
 
 		virtual void Spawn();
 		virtual bool Dying();
 		virtual void Act();
+	
+	friend class NPC_AI_HW2016_ApozenSkull;
 };
 
 #endif // NPC_AI_HW2016_APOZEN_HPP_INCLUDED

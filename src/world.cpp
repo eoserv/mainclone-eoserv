@@ -389,8 +389,8 @@ void world_hw2016(void *world_void)
 	const int monster_skel_warrior = 333;
 	const int monster_spider = 332;
 	const int monster_tentacle = 341;
-	const int monster_twin_demon = 349;
 	const int monster_wraith = 339;
+	const int monster_chest = 350;
 	
 	const int speed_veryfast = 1;
 	const int speed_fast = 0;
@@ -820,7 +820,7 @@ void world_hw2016(void *world_void)
 				world->hw2016_tick = -5;
 				
 				world->maps[5-1]->Effect(MAP_EFFECT_QUAKE, 8);
-				NPC* apozen = spawn_npc(289, 13, 11, monster_apozen, speed_slow);
+				NPC* apozen = spawn_npc(289, 13, 11, monster_apozen, speed_fast);
 				
 				if (apozen)
 					apozen->Say("YOU DARE BRING LIGHT TO MY LAIR?!");
@@ -837,6 +837,42 @@ void world_hw2016(void *world_void)
 			if (world->hw2016_tick == 1800)
 			{
 				abort_halloween();
+			}
+			break;
+		
+		case 50:
+			if (world->hw2016_tick == 0)
+			{
+				world->maps[289-1]->ReloadAs(std::string(world->config["MapDir"]) + "00289-exit.emf");
+				
+				world->hw2016_numchests = 11*12 + 4*7;
+				
+				for (int i = 0; i < world->hw2016_numchests; ++i)
+				{
+					int x, y;
+
+					if (i < 11*12)
+					{
+						x = 8 + (i % 12);
+						y = 5 + (i / 12);
+					}
+					else if (i < 11*12 + 4*7)
+					{
+						x = 3 + ((i - 11*12) % 4);
+						y = 6 + ((i - 11*12) / 4);
+					}
+					else
+						break;
+					
+					spawn_npc(289, x, y, monster_chest, 7); 
+				}
+			}
+			else if (world->hw2016_tick == 600)
+			{
+				clear_map_characters(289);
+				clear_map_npcs(289);
+				world->maps[289-1]->ReloadAs(std::string(world->config["MapDir"]) + "00289.emf");
+				world->hw2016_state = 0;
 			}
 			break;
 			

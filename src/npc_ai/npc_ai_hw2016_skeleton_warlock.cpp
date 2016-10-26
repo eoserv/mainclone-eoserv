@@ -58,7 +58,9 @@ void NPC_AI_HW2016_Skeleton_Warlock::Act()
 			{
 				this->path.clear();
 				
-				switch (util::rand(0,4))
+				int r = util::rand(0,3);
+				
+				switch (r)
 				{
 					case 0:
 						this->npc->Effect(29);
@@ -68,8 +70,8 @@ void NPC_AI_HW2016_Skeleton_Warlock::Act()
 						this->npc->Effect(29);
 						this->charging = 200;
 						break;
+					case 2:
 					case 3:
-					case 4:
 						this->charging = -4;
 
 						if (this->IsNextTo(this->target->x, this->target->y))
