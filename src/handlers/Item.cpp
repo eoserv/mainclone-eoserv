@@ -120,7 +120,7 @@ void Item_Use(Character *character, PacketReader &reader)
 				}
 
 				// Christmas Scroll
-				if (id == 498)
+				else if (id == 498)
 				{
 					unsigned char index = character->map->GenerateNPCIndex();
 
@@ -146,6 +146,40 @@ void Item_Use(Character *character, PacketReader &reader)
 
 					if (character->world->config["LogItemUse"])
 						Console::Err("LOG ITEM USE [ %s ] %s Christmas Scroll", std::string(character->player->client->GetRemoteAddr()).c_str(), character->SourceName().c_str());
+
+					break;
+				}
+
+				// Skin Melter
+				else if (id == 500)
+				{
+					if (character->race != SKIN_SKELETON)
+					{
+						character->ServerMsg("Spooky!");
+						character->race = SKIN_SKELETON;
+						character->Warp(character->map->id, character->x, character->y);
+					}
+
+					break;
+				}
+				
+				// Spooky Skull
+				else if (id == 501)
+				{
+					if (character->HasSpell(24))
+					{
+						character->ServerMsg("You already know this spell!");
+					}
+					else
+					{
+						character->AddSpell(24);
+						character->ServerMsg("You've learned a new spell!");
+
+						PacketBuilder reply(PACKET_STATSKILL, PACKET_TAKE, 6);
+						reply.AddShort(24);
+						reply.AddInt(character->HasItem(1));
+						character->Send(reply);
+					}
 
 					break;
 				}

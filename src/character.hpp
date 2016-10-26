@@ -178,6 +178,7 @@ class Character : public Command_Source
 		unsigned char clas;
 		Gender gender;
 		Skin race;
+		Skin real_race;
 		unsigned char hairstyle, haircolor;
 		short mapid;
 		unsigned char x, y;

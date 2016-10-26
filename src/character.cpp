@@ -430,7 +430,7 @@ Character::Character(std::string name, World *world)
 
 	this->clas = GetRow<int>(row, "class");
 	this->gender = static_cast<Gender>(GetRow<int>(row, "gender"));
-	this->race = static_cast<Skin>(GetRow<int>(row, "race"));
+	this->race = this->real_race = static_cast<Skin>(GetRow<int>(row, "race"));
 	this->hairstyle = GetRow<int>(row, "hairstyle");
 	this->haircolor = GetRow<int>(row, "haircolor");
 
@@ -2224,7 +2224,7 @@ void Character::Save()
 		"`str` = #, `int` = #, `wis` = #, `agi` = #, `con` = #, `cha` = #, `statpoints` = #, `skillpoints` = #, `karma` = #, `sitting` = #, `hidden` = #, "
 		"`nointeract` = #, `bankmax` = #, `goldbank` = #, `usage` = #, `inventory` = '$', `bank` = '$', `paperdoll` = '$', "
 		"`spells` = '$', `guild` = '$', `guild_rank` = #, `guild_rank_string` = '$', `quest` = '$', `vars` = '$' WHERE `name` = '$'",
-		this->title.c_str(), this->home.c_str(), this->fiance.c_str(), this->partner.c_str(), int(this->admin), this->clas, int(this->gender), int(this->race),
+		this->title.c_str(), this->home.c_str(), this->fiance.c_str(), this->partner.c_str(), int(this->admin), this->clas, int(this->gender), int(this->real_race),
 		this->hairstyle, this->haircolor, this->mapid, this->x, this->y, int(this->direction), this->level, this->exp, this->hp, this->tp,
 		this->str, this->intl, this->wis, this->agi, this->con, this->cha, this->statpoints, this->skillpoints, this->karma, int(this->sitting), int(this->hidden),
 		nointeract, this->bankmax, this->goldbank, this->Usage(), ItemSerialize(this->inventory).c_str(), ItemSerialize(this->bank).c_str(),

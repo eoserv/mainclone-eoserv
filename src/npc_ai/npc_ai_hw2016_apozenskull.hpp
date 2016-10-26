@@ -15,7 +15,12 @@ class NPC_AI_HW2016_ApozenSkull : public NPC_AI_Standard
 {
 	protected:
 		int charging;
+	
+	public:
 		NPC* apozen;
+		bool really_die = false;
+		
+	protected:
 		bool IsInRange(int x, int y, int range) const;
 		NPC* PickHealTarget(int range) const;
 

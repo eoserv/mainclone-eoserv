@@ -104,7 +104,7 @@ void NPC_AI_HW2016_Apozen::Act()
 		return npc;
 	};
 
-	this->npc->hw2016_aposhield = (this->npc->map->npcs.size() > 5);
+	this->npc->hw2016_aposhield = (this->npc->map->npcs.size() > (this->num_skulls + 1));
 
 	++this->charging;
 	
@@ -123,35 +123,8 @@ void NPC_AI_HW2016_Apozen::Act()
 			case 0: // summon imps
 				if (!this->npc->hw2016_aposhield)
 				{
-					for (int i = 0; i < 2; ++i)
-						for (int ii = 0; ii < this->npc->map->world->hw2016_spawncount; ++ii)
-						{
-							int x,y;
-							
-							if (util::rand(0,1))
-								x = util::rand(2, 6);
-							else
-								x = util::rand(15, 19);
-
-							y = util::rand(2, 20);
-
-							spawn_npc(289, x, y, monster_imp1, speed_fast);
-						}
-				
-					for (int i = 0; i < 2; ++i)
-						for (int ii = 0; ii < this->npc->map->world->hw2016_spawncount; ++ii)
-						{
-							int x, y;
-							
-							x = util::rand(2, 19);
-							
-							if (util::rand(0,1))
-								y = util::rand(2, 6);
-							else
-								y = util::rand(16, 20);
-
-							spawn_npc(289, x, y, monster_imp2, speed_fast);
-						}
+					this->npc->Say("ARISE");
+					this->npc->map->world->hw2016_apospawn = 1;
 						
 					this->charging = -30;
 				}
@@ -163,20 +136,8 @@ void NPC_AI_HW2016_Apozen::Act()
 			case 1: // summon demons
 				if (!this->npc->hw2016_aposhield)
 				{
-					if (this->npc->map->world->hw2016_spawncount == 1)
-						spawn_npc(289, 4 + 13 * util::rand(0,1), 4 + 13 * util::rand(0,1), monster_twin_demon, speed_slow);
-					
-					if (this->npc->map->world->hw2016_spawncount > 1)
-						spawn_npc(289, 4, 4, monster_twin_demon, speed_slow);
-
-					if (this->npc->map->world->hw2016_spawncount >= 2)
-						spawn_npc(289, 17, 17, monster_twin_demon, speed_slow);
-
-					if (this->npc->map->world->hw2016_spawncount >= 3)
-						spawn_npc(289, 4, 17, monster_twin_demon, speed_slow);
-
-					if (this->npc->map->world->hw2016_spawncount >= 4)
-						spawn_npc(289, 17, 4, monster_twin_demon, speed_slow);
+					this->npc->Say("ARISE");
+					this->npc->map->world->hw2016_apospawn = 2;
 
 					this->charging = -30;
 				}
@@ -254,7 +215,8 @@ void NPC_AI_HW2016_Apozen::Act()
 			
 			if (chase < 10)
 			{
-				this->SmartChase(this->target);
+				if (this->target)
+					this->SmartChase(this->target);
 				
 				{
 					NPC* skull = this->skull[util::rand(0,3)];

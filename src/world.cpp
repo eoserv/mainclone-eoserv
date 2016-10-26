@@ -26,6 +26,8 @@
 #include "timer.hpp"
 #include "commands/commands.hpp"
 #include "handlers/handlers.hpp"
+#include "npc_ai/npc_ai_hw2016_apozen.hpp"
+#include "npc_ai/npc_ai_hw2016_apozenskull.hpp"
 
 #include "console.hpp"
 #include "hash.hpp"
@@ -75,11 +77,19 @@ void world_act_npcs(void *world_void)
 	double current_time = Timer::GetTime();
 	UTIL_FOREACH(world->maps, map)
 	{
+		NPC* check;
+		
+		if (map->npcs.size() > 0)
+			check = map->npcs[0];
+
 		UTIL_FOREACH(map->npcs, npc)
 		{
 			if (npc->alive && npc->last_act + npc->act_speed < current_time)
 			{
 				npc->Act();
+
+				if (check != map->npcs[0])
+					break;
 			}
 		}
 	}
@@ -321,6 +331,11 @@ void world_hw2016(void *world_void)
 		}
 	};
 	
+	auto clear_map_items = [&](int mapid)
+	{
+		world->maps[mapid-1]->items.clear();
+	};
+	
 	auto clear_map_characters = [&](int mapid)
 	{
 		auto chars = world->maps[mapid-1]->characters;
@@ -343,6 +358,17 @@ void world_hw2016(void *world_void)
 		for (Character* character : chars)
 		{
 			character->Warp(newmapid, character->x, character->y, WARP_ANIMATION_NONE);
+		}
+	};
+	
+	auto warp_map_characters_xy = [&](int mapid, int newmapid, int x, int y)
+	{
+		auto chars = world->maps[mapid-1]->characters;
+		world->maps[mapid-1]->TimedDrains();
+		
+		for (Character* character : chars)
+		{
+			character->Warp(newmapid, x, y, WARP_ANIMATION_NONE);
 		}
 	};
 	
@@ -389,6 +415,7 @@ void world_hw2016(void *world_void)
 	const int monster_skel_warrior = 333;
 	const int monster_spider = 332;
 	const int monster_tentacle = 341;
+	const int monster_twin_demon = 349;
 	const int monster_wraith = 339;
 	const int monster_chest = 350;
 	
@@ -423,6 +450,9 @@ void world_hw2016(void *world_void)
 			Console::Dbg("Halloween event activated!");
 			world->hw2016_state = 1;
 			world->hw2016_tick = -5;
+			world->hw2016_apospawn = 0;
+			for (int i = 0; i < 4; ++i)
+				world->hw2016_dyingskull[i] = nullptr;
 		}
 	}
 	
@@ -538,7 +568,7 @@ void world_hw2016(void *world_void)
 						if (util::rand(0,1))
 							spawn_npc(286, x, y, monster_skel_warrior, speed_fast);
 						else
-							if (util::rand(0,3))
+							if (util::rand(0,3) == 0)
 								spawn_npc(286, x, y, monster_reaper, speed_fast);
 							else
 								spawn_npc(286, x, y, monster_skel_warlock, speed_slow);
@@ -575,7 +605,7 @@ void world_hw2016(void *world_void)
 						if (util::rand(0,1))
 							spawn_npc(286, x, y, monster_banshee, speed_slow);
 						else
-							if (util::rand(0,1))
+							if (util::rand(0,2) == 0)
 								spawn_npc(286, x, y, monster_reaper, speed_fast);
 							else
 								spawn_npc(286, x, y, monster_chaos, speed_slow);
@@ -834,6 +864,111 @@ void world_hw2016(void *world_void)
 			break;
 		
 		case 41:
+			if (world->hw2016_apospawn == 1)
+			{
+				for (int i = 0; i < 2; ++i)
+					for (int ii = 0; ii < world->hw2016_spawncount; ++ii)
+					{
+						int x,y;
+						
+						if (util::rand(0,1))
+							x = util::rand(2, 6);
+						else
+							x = util::rand(15, 19);
+
+						y = util::rand(2, 20);
+
+						spawn_npc(289, x, y, monster_imp1, speed_fast);
+					}
+			
+				for (int i = 0; i < 2; ++i)
+					for (int ii = 0; ii < world->hw2016_spawncount; ++ii)
+					{
+						int x, y;
+						
+						x = util::rand(2, 19);
+						
+						if (util::rand(0,1))
+							y = util::rand(2, 6);
+						else
+							y = util::rand(16, 20);
+
+						spawn_npc(289, x, y, monster_imp2, speed_fast);
+					}
+
+				world->hw2016_apospawn = 0;
+			}
+			
+			if (world->hw2016_apospawn == 2)
+			{
+				if (world->hw2016_spawncount == 1)
+					spawn_npc(289, 4 + 13 * util::rand(0,1), 4 + 13 * util::rand(0,1), monster_twin_demon, speed_slow);
+					
+				if (world->hw2016_spawncount > 1)
+					spawn_npc(289, 4, 4, monster_twin_demon, speed_slow);
+
+				if (world->hw2016_spawncount >= 2)
+					spawn_npc(289, 17, 17, monster_twin_demon, speed_slow);
+
+				if (world->hw2016_spawncount >= 3)
+					spawn_npc(289, 4, 17, monster_twin_demon, speed_slow);
+
+				if (world->hw2016_spawncount >= 4)
+					spawn_npc(289, 17, 4, monster_twin_demon, speed_slow);
+
+				world->hw2016_apospawn = 0;
+			}
+			
+			for (int i = 0; i < 4; ++i)
+			{
+				if (world->hw2016_dyingskull[i])
+				{
+					NPC* skull = world->hw2016_dyingskull[i];
+
+					unsigned char index = skull->map->GenerateNPCIndex();
+
+					if (index > 250)
+					{
+						NPC_AI_HW2016_ApozenSkull* skull_ai = static_cast<NPC_AI_HW2016_ApozenSkull*>(skull->ai.get());
+						if (skull_ai)
+						{
+							skull_ai->really_die = true;
+							skull->Die();
+						}
+						world->hw2016_dyingskull[i] = nullptr;
+						continue;
+					}
+
+					NPC *npc = new NPC(skull->map, 297, skull->x, skull->y, 7, DIRECTION_DOWN, index, true);
+					skull->map->npcs.push_back(npc);
+					npc->Spawn();
+					
+					int weak = 0;
+					
+					NPC_AI_HW2016_ApozenSkull* skull_ai = static_cast<NPC_AI_HW2016_ApozenSkull*>(skull->ai.get());
+					
+					if (skull_ai)
+					{
+						for (int i = 0; i < 4; ++i)
+						{
+							NPC_AI_HW2016_Apozen* ai = static_cast<NPC_AI_HW2016_Apozen*>(skull_ai->apozen->ai.get());
+
+							if (ai && ai->skull[i] == skull)
+								ai->skull[i] = nullptr;
+							
+							if (ai && ai->skull[i] == nullptr)
+								++weak;
+						}
+					
+						skull_ai->apozen->hw2016_apoweak = weak;
+					}
+					
+					skull_ai->really_die = true;
+					skull->Die();
+					world->hw2016_dyingskull[i] = nullptr;
+				}	
+			}
+			
 			if (world->hw2016_tick == 1800)
 			{
 				abort_halloween();
@@ -844,8 +979,6 @@ void world_hw2016(void *world_void)
 			if (world->hw2016_tick == 0)
 			{
 				world->maps[289-1]->ReloadAs(std::string(world->config["MapDir"]) + "00289-exit.emf");
-				
-				world->hw2016_numchests = 11*12 + 4*7;
 				
 				for (int i = 0; i < world->hw2016_numchests; ++i)
 				{
@@ -867,10 +1000,11 @@ void world_hw2016(void *world_void)
 					spawn_npc(289, x, y, monster_chest, 7); 
 				}
 			}
-			else if (world->hw2016_tick == 600)
+			else if (world->hw2016_tick == 300)
 			{
-				clear_map_characters(289);
+				warp_map_characters_xy(289, 5, 40, 40);
 				clear_map_npcs(289);
+				clear_map_items(289);
 				world->maps[289-1]->ReloadAs(std::string(world->config["MapDir"]) + "00289.emf");
 				world->hw2016_state = 0;
 			}

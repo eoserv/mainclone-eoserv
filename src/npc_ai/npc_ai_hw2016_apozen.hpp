@@ -17,8 +17,10 @@ class NPC_AI_HW2016_ApozenSkull;
 
 class NPC_AI_HW2016_Apozen : public NPC_AI_Standard
 {
-	protected:
+	public:
 		NPC* skull[4];
+	
+	protected:
 		int num_skulls;
 		int charging;
 		int chase;

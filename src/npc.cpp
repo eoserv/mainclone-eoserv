@@ -486,7 +486,12 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 
 		dropuid = this->map->GenerateItemID();
 
-		std::shared_ptr<Map_Item> newitem(std::make_shared<Map_Item>(dropuid, dropid, dropamount, this->x, this->y, from->PlayerID(), Timer::GetTime() + static_cast<int>(this->map->world->config["ProtectNPCDrop"])));
+		int protect_time = static_cast<int>(this->map->world->config["ProtectNPCDrop"]);
+		
+		if (this->id == 450)
+			protect_time = 900;
+		
+		std::shared_ptr<Map_Item> newitem(std::make_shared<Map_Item>(dropuid, dropid, dropamount, this->x, this->y, from->PlayerID(), Timer::GetTime() + protect_time));
 		this->map->items.push_back(newitem);
 
 		// Selects a random number between 0 and maxhp, and decides the winner based on that
@@ -626,9 +631,37 @@ void NPC::Killed(Character *from, int amount, int spell_id)
 			
 			character->ServerMsg("Apozen's assault has been contained! Your score was: " + util::to_string(character->hw2016_points));
 		}
+		
+		UTIL_FOREACH(this->map->characters, character)
+		{
+			if (this->map->id == 289)
+			{
+				if (character == highest_scorer)
+				{
+					num_chests += 3;
+					character->hw2016_chests += 3;
+					character->ServerMsg("You may open three reward chests!");
+				}
+				else
+				{
+					num_chests += 2;
+					character->hw2016_chests += 2;
+					character->ServerMsg("You may open two reward chests!");
+				}
+			}
+		}
+		
+		if (highest_scorer)
+		{
+			UTIL_FOREACH(this->map->characters, character)
+			{
+				character->ServerMsg("Highest score: " + util::ucfirst(highest_scorer->SourceName()) + " (" + util::to_string(highest_score) + ")");
+			}
+		}
 
 		this->map->world->hw2016_numchests = num_chests;
 		this->map->world->hw2016_state = 50;
+		this->map->world->hw2016_tick = -5;
 	}
 	else // not indented to make merging easier
 	UTIL_FOREACH(this->map->characters, character)

@@ -63,31 +63,19 @@ NPC* NPC_AI_HW2016_ApozenSkull::PickHealTarget(int range) const
 
 bool NPC_AI_HW2016_ApozenSkull::Dying()
 {
-	unsigned char index = this->npc->map->GenerateNPCIndex();
-
-	if (index > 250)
-		return false;
-
-	NPC *npc = new NPC(this->npc->map, 297, this->npc->x, this->npc->y, 7, DIRECTION_DOWN, index, true);
-	this->npc->map->npcs.push_back(npc);
-	npc->Spawn();
-	
-	int weak = 0;
-	
 	for (int i = 0; i < 4; ++i)
 	{
-		NPC_AI_HW2016_Apozen* ai = static_cast<NPC_AI_HW2016_Apozen*>(this->apozen->ai.get());
+		if (this->npc->map->world->hw2016_dyingskull[i] == this->npc)
+			break;
 
-		if (ai && ai->skull[i] == this->npc)
-			ai->skull[i] = nullptr;
-		
-		if (ai && ai->skull[i] == nullptr)
-			++weak;
+		if (!this->npc->map->world->hw2016_dyingskull[i])
+		{
+			this->npc->map->world->hw2016_dyingskull[i] = this->npc;
+			break;
+		}
 	}
-	
-	this->apozen->hw2016_apoweak = weak;
 
-	return false;
+	return !really_die;
 }
 
 void NPC_AI_HW2016_ApozenSkull::Act()
@@ -103,7 +91,7 @@ void NPC_AI_HW2016_ApozenSkull::Act()
 		if (!this->target)
 			return;
 		
-		if (this->charging > 204)
+		if (this->charging >= 204)
 		{
 			std::list<Character*> burned;
 
@@ -123,7 +111,7 @@ void NPC_AI_HW2016_ApozenSkull::Act()
 			
 			for (Character* c : burned)
 			{
-				int hit = c->maxhp * 0.3;
+				int hit = c->maxhp * 0.1;
 				
 				if (hit > c->hp)
 					hit = c->hp - 1;
@@ -138,7 +126,6 @@ void NPC_AI_HW2016_ApozenSkull::Act()
 		else if (charging >= 200 && charging % 2 == 0)
 		{
 			this->npc->Effect(17);
-			this->npc->hp = this->npc->ENF().hp;
 		}
 		else if (this->charging == 103)
 		{
