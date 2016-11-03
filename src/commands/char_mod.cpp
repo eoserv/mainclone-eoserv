@@ -118,7 +118,7 @@ void SetX(const std::vector<std::string>& arguments, Command_Source* from, std::
 		{
 			// Easiest way to get the character to update on everyone nearby's screen
 			if (appearance)
-				victim->Warp(victim->map->id, victim->x, victim->y);
+				victim->FakeWarp();
 
 			// TODO: Good way of updating skillpoints
 			(void)skillpoints;

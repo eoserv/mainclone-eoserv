@@ -341,6 +341,7 @@ class Character : public Command_Source
 		bool InRange(const NPC *) const;
 		bool InRange(const Map_Item&) const;
 		void Warp(short map, unsigned char x, unsigned char y, WarpAnimation animation = WARP_ANIMATION_NONE);
+		void FakeWarp();
 		void Refresh();
 		void ShowBoard(Board *board = 0);
 		std::string PaddedGuildTag();

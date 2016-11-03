@@ -1285,6 +1285,8 @@ void Character::Warp(short map, unsigned char x, unsigned char y, WarpAnimation 
 		builder.AddChar(0); // ?
 	}
 
+	this->Send(builder);
+
 	if (this->map && this->map->exists)
 	{
 		this->map->Leave(this, animation);
@@ -1329,8 +1331,6 @@ void Character::Warp(short map, unsigned char x, unsigned char y, WarpAnimation 
 
 	this->map->Enter(this, animation);
 
-	this->Send(builder);
-
 	if (this->arena)
 	{
 		--this->arena->occupants;
@@ -1342,6 +1342,66 @@ void Character::Warp(short map, unsigned char x, unsigned char y, WarpAnimation 
 		this->arena = this->next_arena;
 		++this->arena->occupants;
 		this->next_arena = 0;
+	}
+}
+
+void Character::FakeWarp()
+{
+	if (!this->map || this->nowhere)
+		return;
+
+	// Leave
+	{
+		PacketBuilder builder(PACKET_AVATAR, PACKET_REMOVE, 3);
+		builder.AddShort(this->PlayerID());
+
+		UTIL_FOREACH(this->map->characters, checkcharacter)
+		{
+			if (!this->InRange(checkcharacter))
+				continue;
+
+			checkcharacter->Send(builder);
+		}
+	}
+
+	// Enter
+	{
+		PacketBuilder builder(PACKET_PLAYERS, PACKET_AGREE, 63);
+
+		builder.AddByte(255);
+		builder.AddBreakString(this->SourceName());
+		builder.AddShort(this->PlayerID());
+		builder.AddShort(this->mapid);
+		builder.AddShort(this->x);
+		builder.AddShort(this->y);
+		builder.AddChar(this->direction);
+		builder.AddChar(6); // ?
+		builder.AddString(this->PaddedGuildTag());
+		builder.AddChar(this->level);
+		builder.AddChar(this->gender);
+		builder.AddChar(this->hairstyle);
+		builder.AddChar(this->haircolor);
+		builder.AddChar(this->race);
+		builder.AddShort(this->maxhp);
+		builder.AddShort(this->hp);
+		builder.AddShort(this->maxtp);
+		builder.AddShort(this->tp);
+		// equipment
+		this->AddPaperdollData(builder, "B000A0HSW");
+
+		builder.AddChar(this->sitting);
+		builder.AddChar(this->IsHideInvisible());
+		builder.AddChar(WARP_ANIMATION_NONE);
+		builder.AddByte(255);
+		builder.AddChar(1); // 0 = NPC, 1 = player
+
+		UTIL_FOREACH(this->map->characters, checkcharacter)
+		{
+			if (!this->InRange(checkcharacter))
+				continue;
+
+			checkcharacter->Send(builder);
+		}
 	}
 }
 

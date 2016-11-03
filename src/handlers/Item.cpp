@@ -157,7 +157,7 @@ void Item_Use(Character *character, PacketReader &reader)
 					{
 						character->ServerMsg("Spooky!");
 						character->race = SKIN_SKELETON;
-						character->Warp(character->map->id, character->x, character->y);
+						character->FakeWarp();
 					}
 
 					break;

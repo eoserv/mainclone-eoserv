@@ -296,7 +296,7 @@ void Duty(const std::vector<std::string>& arguments, Character* from)
 		player->Send(reply);
 	}
 
-	swap->Warp(swap->mapid, swap->x, swap->y, WARP_ANIMATION_NONE);
+	swap->FakeWarp();
 }
 
 COMMAND_HANDLER_REGISTER(admin)
