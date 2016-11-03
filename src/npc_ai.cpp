@@ -334,7 +334,7 @@ void NPC_AI_Legacy::DumbChase(int x, int y)
 
 void NPC_AI_Legacy::Act()
 {
-	Character *attacker = this->PickTarget();
+	Character *attacker = this->PickTarget(true);
 
 	if (attacker)
 	{

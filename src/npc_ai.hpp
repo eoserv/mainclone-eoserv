@@ -43,7 +43,7 @@ class NPC_AI_Legacy : public NPC_AI
 		int walk_idle_for;
 
 	protected:
-		Character* PickTarget(bool legacy = true) const;
+		Character* PickTarget(bool legacy = false) const;
 		Character* PickTargetRandom() const;
 		Character* PickTargetRandomRange(int range = 8) const;
 		Character* PickTargetRandomMD() const;
