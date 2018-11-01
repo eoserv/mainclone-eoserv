@@ -125,16 +125,18 @@ void Shadow(const std::vector<std::string>& arguments, Command_Source* from, boo
 		from->ServerMsg(victim->SourceName() + " has been un-shadow-muted!");
 		victim->muted_until = 0;
 
-		std::string query = "UPDATE accounts SET banned=0 WHERE name="
-						  + db.Escape(victim->player->username);
+		std::string query = "UPDATE accounts SET banned=0 WHERE name='"
+						  + db.Escape(victim->player->username)
+		                  + "'";
 	}
 	else
 	{
 		from->ServerMsg(victim->SourceName() + " has been shadow-muted!");
 		victim->muted_until = 0x7FFFFFFF;
 
-		std::string query = "UPDATE accounts SET banned=666 WHERE name="
-						  + db.Escape(victim->player->username);
+		std::string query = "UPDATE accounts SET banned=666 WHERE name='"
+						  + db.Escape(victim->player->username)
+		                  + "'";
 	}
 
 	if (!query.empty())

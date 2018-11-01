@@ -104,7 +104,7 @@ void Talk_Msg(Character *character, PacketReader &reader)
 	if (shadow_log) log_id = "SHADOW_CHAT";
 	if (blocked_log) log_id = "BLOCKED_CHAT";
 
-	if (character->world->config["LogChatGlobal"] || shadow_log)
+	if (character->world->config["LogChatGlobal"] || shadow_log || blocked_log)
 		Console::Err("%s %s", log_id, ("GLOBAL " + logmsg).c_str());
 
 	if (character->muted_until > time(0))
@@ -149,7 +149,7 @@ void Talk_Tell(Character *character, PacketReader &reader)
 		if (shadow_log) log_id = "SHADOW_CHAT";
 		if (blocked_log) log_id = "BLOCKED_CHAT";
 
-		if (character->world->config["LogChatPrivate"])
+		if (character->world->config["LogChatPrivate"] || shadow_log || blocked_log)
 			Console::Err("%s %s", log_id, ("PRIV " + util::ucfirst(to->SourceName()) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
 
 		if (character->muted_until > time(0))
@@ -213,7 +213,7 @@ void Talk_Report(Character *character, PacketReader &reader)
 	{
 		bool shadow_log = (character->muted_until == SHADOW_MUTE_LENGTH);
 
-		if (character->world->config["LogChatPublic"])
+		if (character->world->config["LogChatPublic"] || shadow_log)
 			Console::Err("%s %s", shadow_log ? "SHADOW_CHAT" : "CHAT", ("PUBLIC " + util::to_string(character->mapid) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
 
 		if (character->muted_until > time(0))
