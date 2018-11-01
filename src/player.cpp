@@ -48,7 +48,12 @@ Player::Player(std::string username, World *world)
 	UTIL_FOREACH_REF(res, row)
 	{
 		Character *newchar = new Character(row["name"], world);
+
 		newchar->player = this;
+
+		if (this->banned == 666)
+			newchar->muted_until = SHADOW_MUTE_LENGTH;
+
 		this->characters.push_back(newchar);
 	}
 

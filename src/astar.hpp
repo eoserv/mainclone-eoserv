@@ -8,6 +8,7 @@
 #define ASTAR_HPP_INCLUDED
 
 #include <deque>
+#include <functional>
 #include <utility>
 #include <vector>
 

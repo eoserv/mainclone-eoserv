@@ -236,7 +236,15 @@ class Character : public Command_Source
 
 		Timestamp timestamp;
 
+		struct sent_message_t
+		{
+			double when;
+			std::string target;
+			std::string message;
+		};
+
 		std::deque<std::string> chat_log;
+		std::deque<sent_message_t> sent_message_log;
 
 		enum SpellTarget
 		{
@@ -297,11 +305,11 @@ class Character : public Command_Source
 		bool IsHideAdmin() const { return hidden & HideAdmin; }
 		bool IsHideWarp() const { return hidden & HideWarp; }
 
-		bool CanInteractItems() const { return adminsecret && !(nointeract & NoInteractItems); }
-		bool CanInteractCombat() const { return adminsecret && !(nointeract & NoInteractCombat); }
-		bool CanInteractDoors() const { return adminsecret && !(nointeract & NoInteractDoors); }
-		bool CanInteractCharMod() const { return adminsecret && !(nointeract & NoInteractCharMod); }
-		bool CanInteractPKCombat() const { return adminsecret && !(nointeract & NoInteractPKCombat); }
+		bool CanInteractItems() const { return muted_until != SHADOW_MUTE_LENGTH && adminsecret && !(nointeract & NoInteractItems); }
+		bool CanInteractCombat() const { return muted_until != SHADOW_MUTE_LENGTH && adminsecret && !(nointeract & NoInteractCombat); }
+		bool CanInteractDoors() const { return muted_until != SHADOW_MUTE_LENGTH && adminsecret && !(nointeract & NoInteractDoors); }
+		bool CanInteractCharMod() const { return muted_until != SHADOW_MUTE_LENGTH && adminsecret && !(nointeract & NoInteractCharMod); }
+		bool CanInteractPKCombat() const { return muted_until != SHADOW_MUTE_LENGTH && adminsecret && !(nointeract & NoInteractPKCombat); }
 
 		int PlayerID() const;
 
@@ -349,8 +357,8 @@ class Character : public Command_Source
 		std::string GuildRankString();
 		std::string HomeString() const;
 		int Usage();
-		bool ChatAllowed();
-		bool ChatAllowedTo(const std::string& other);
+		bool ChatAllowed(const std::string& message);
+		bool ChatAllowedTo(const std::string& other, const std::string& message);
 		short SpawnMap();
 		unsigned char SpawnX();
 		unsigned char SpawnY();
@@ -381,6 +389,7 @@ class Character : public Command_Source
 		void AddPaperdollData(PacketBuilder&, const char* format);
 
 		void AddChatLog(std::string marker, std::string name, std::string msg);
+		void AddSpamChatLog(std::string target, std::string msg);
 		std::string GetChatLogDump();
 
 		void Send(const PacketBuilder &);

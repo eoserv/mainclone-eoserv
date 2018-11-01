@@ -36,6 +36,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -1602,18 +1603,57 @@ int Character::Usage()
 	return this->usage + (std::time(0) - this->login_time) / 60;
 }
 
-bool Character::ChatAllowed()
+bool Character::ChatAllowed(const std::string& message)
 {
 	bool allowed = this->Usage() >= int(this->world->config["TalkUsageLimit"])
 	            || this->level >= int(this->world->config["TalkLevelLimit"]);
 
-	return allowed;
+	if (!allowed)
+		return false;
+
+	// Limit to 2-10 repeased messages per 30 minute period
+	// Note messages are added to sent_message_log even if not allowed
+
+	int usage = this->Usage();
+	int repeat_cap = int(this->world->config["SpamRepeatBase"]);
+	int repeat_cap_max = int(this->world->config["SpamRepeatCap"]);
+
+	repeat_cap += usage / int(this->world->config["SpamRepeatUsageThreshold"]);
+
+	if (repeat_cap > repeat_cap_max)
+		repeat_cap = repeat_cap_max;
+
+	std::unordered_set<std::string> priv_set;
+	std::unordered_map<std::string, int> seen_set;
+
+	for (auto&& log_entry : this->sent_message_log)
+	{
+		// Ignore messages older than 30 minutes
+		if (log_entry.when + double(this->world->config["SpamLogDuration"]) < world->timer.GetTime())
+			continue;
+
+		// Target is a single character for non-PMs
+		if (log_entry.target.size() > 1)
+			priv_set.insert(log_entry.target);
+
+		int repeat_count = ++seen_set[log_entry.message];
+
+		if (repeat_count > repeat_cap)
+			return false;
+	}
+
+	// Allow 3-15 distinct people to be contacted via private message / 30 mins
+	if (int(priv_set.size()) > repeat_cap + repeat_cap / 2)
+		return false;
+
+	return true;
 }
 
-bool Character::ChatAllowedTo(const std::string& other)
+bool Character::ChatAllowedTo(const std::string& other, const std::string& message)
 {
-	bool allowed = ChatAllowed()
-	            || std::find(this->allowed_to_pm.begin(), this->allowed_to_pm.end(), other) != this->allowed_to_pm.end();
+	bool pm_whitelisted = std::find(UTIL_CRANGE(this->allowed_to_pm), other) != this->allowed_to_pm.end();
+
+	bool allowed = ChatAllowed(message) || pm_whitelisted;
 
 	if (!allowed)
 	{
@@ -1630,7 +1670,6 @@ bool Character::ChatAllowedTo(const std::string& other)
 			return true;
 		}
 	}
-
 	return allowed;
 }
 
@@ -2189,6 +2228,18 @@ void Character::AddChatLog(std::string marker, std::string name, std::string msg
 		chat_log.pop_front();
 
 	chat_log.push_back(marker + " " + util::ucfirst(name) + ": " + msg);
+}
+
+void Character::AddSpamChatLog(std::string target, std::string msg)
+{
+	sent_message_log.push_back({
+		world->timer.GetTime(),
+		target,
+		msg
+	});
+
+	if (int(sent_message_log.size()) > int(this->world->config["SpamLogSize"]))
+		sent_message_log.pop_front();
 }
 
 std::string Character::GetChatLogDump()

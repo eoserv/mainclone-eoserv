@@ -7,6 +7,8 @@
 #ifndef FWD_CHARACTER_HPP_INCLUDED
 #define FWD_CHARACTER_HPP_INCLUDED
 
+#define SHADOW_MUTE_LENGTH 0x7FFFFFFF
+
 class Character;
 
 struct Character_Item;

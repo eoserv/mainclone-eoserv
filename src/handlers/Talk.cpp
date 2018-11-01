@@ -41,13 +41,18 @@ namespace Handlers
 void Talk_Request(Character *character, PacketReader &reader)
 {
 	if (!character->guild) return;
-	if (character->muted_until > time(0)) return;
 
 	std::string message = reader.GetEndString(); // message
 	limit_message(message, static_cast<int>(character->world->config["ChatLength"]));
 
-	if (character->world->config["LogChatGuild"])
-		Console::Err("CHAT %s", ("GUILD " + character->guild->tag + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+	bool shadow_log = (character->muted_until == SHADOW_MUTE_LENGTH);
+
+	if (character->world->config["LogChatGuild"] || shadow_log)
+		Console::Err("%s %s", shadow_log ? "SHADOW_CHAT" : "CHAT", ("GUILD " + character->guild->tag + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+
+	if (character->muted_until > time(0))
+		return;
+
 	character->guild->Msg(character, message, false);
 }
 
@@ -55,54 +60,80 @@ void Talk_Request(Character *character, PacketReader &reader)
 void Talk_Open(Character *character, PacketReader &reader)
 {
 	if (!character->party) return;
-	if (character->muted_until > time(0)) return;
 
 	std::string message = reader.GetEndString(); // message
 	limit_message(message, static_cast<int>(character->world->config["ChatLength"]));
 
-	if (character->world->config["LogChatParty"])
-		Console::Err("CHAT %s", ("PARTY " + util::to_string((int)reinterpret_cast<intptr_t>(character->party)) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+	bool shadow_log = (character->muted_until == SHADOW_MUTE_LENGTH);
+
+	if (character->world->config["LogChatParty"] || shadow_log)
+		Console::Err("%s %s", shadow_log ? "SHADOW_CHAT" : "CHAT", ("PARTY " + util::to_string((int)reinterpret_cast<intptr_t>(character->party)) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+
+	if (character->muted_until > time(0))
+		return;
+
 	character->party->Msg(character, message, false);
 }
 
 // Global chat message
 void Talk_Msg(Character *character, PacketReader &reader)
 {
-	if (character->muted_until > time(0)) return;
-
 	if (character->mapid == static_cast<int>(character->world->config["JailMap"]))
-	{
 		return;
-	}
-
-	if (!character->ChatAllowed())
-	{
-		character->ServerMsg(character->world->i18n.Format("global_block"));
-		return;
-	}
 
 	std::string message = reader.GetEndString();
 	limit_message(message, static_cast<int>(character->world->config["ChatLength"]));
 
-	if (character->world->config["LogChatGlobal"])
-		Console::Err("CHAT %s", ("GLOBAL " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+	bool shadow_log = (character->muted_until == SHADOW_MUTE_LENGTH);
+	bool blocked_log = false;
+	auto&& logmsg = util::ucfirst(character->SourceName()) + ": " + message;
+
+	character->AddSpamChatLog("~", message);
+
+	if (!shadow_log && !character->ChatAllowed(message))
+	{
+		blocked_log = true;
+		character->world->AdminMsg(nullptr, "Blocked Chat: GLOBAL " + logmsg);
+
+		character->ServerMsg(character->world->i18n.Format("global_block"));
+		return;
+	}
+
+	const char* log_id = "CHAT";
+
+	if (shadow_log) log_id = "SHADOW_CHAT";
+	if (blocked_log) log_id = "BLOCKED_CHAT";
+
+	if (character->world->config["LogChatGlobal"] || shadow_log)
+		Console::Err("%s %s", log_id, ("GLOBAL " + logmsg).c_str());
+
+	if (character->muted_until > time(0))
+		return;
+
 	character->world->Msg(character, message, false);
 }
 
 // Private chat message
 void Talk_Tell(Character *character, PacketReader &reader)
 {
-	if (character->muted_until > time(0)) return;
-
 	std::string name = reader.GetBreakString();
 	std::string message = reader.GetEndString();
 	limit_message(message, static_cast<int>(character->world->config["ChatLength"]));
 	Character *to = character->world->GetCharacter(name);
 
+	character->AddSpamChatLog(util::lowercase(name), message);
+
 	if (to && !to->IsHideOnline())
 	{
-		if (!character->ChatAllowedTo(to->SourceName()))
+		bool shadow_log = (character->muted_until == SHADOW_MUTE_LENGTH);
+		bool blocked_log = false;
+		auto&& logmsg = util::ucfirst(character->SourceName()) + " to " + util::ucfirst(to->SourceName()) + ": " + message;
+
+		if (!shadow_log && !character->ChatAllowedTo(to->SourceName(), message))
 		{
+			blocked_log = true;
+			character->world->AdminMsg(nullptr, "Blocked Chat: PRIV " + logmsg);
+
 			character->ServerMsg(character->world->i18n.Format("pm_block"));
 
 			PacketBuilder reply(PACKET_TALK, PACKET_REPLY, 2 + name.length());
@@ -113,14 +144,23 @@ void Talk_Tell(Character *character, PacketReader &reader)
 			return;
 		}
 
+		const char* log_id = "CHAT";
+
+		if (shadow_log) log_id = "SHADOW_CHAT";
+		if (blocked_log) log_id = "BLOCKED_CHAT";
+
+		if (character->world->config["LogChatPrivate"])
+			Console::Err("%s %s", log_id, ("PRIV " + util::ucfirst(to->SourceName()) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+
+		if (character->muted_until > time(0))
+			return;
+
 		if (to->whispers)
 		{
 			to->Msg(character, message);
 		}
 		else
 		{
-			if (character->world->config["LogChatPrivate"])
-				Console::Err("CHAT %s", ("PRIV " + util::ucfirst(to->SourceName()) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
 			character->Msg(to, character->world->i18n.Format("whisper_blocked", to->SourceName()));
 		}
 	}
@@ -136,15 +176,11 @@ void Talk_Tell(Character *character, PacketReader &reader)
 // Public chat message
 void Talk_Report(Character *character, PacketReader &reader)
 {
-	if (character->muted_until > time(0)) return;
-
 	std::string message = reader.GetEndString();
 	limit_message(message, static_cast<int>(character->world->config["ChatLength"]));
 
 	if (message.empty())
-	{
 		return;
-	}
 
 	if (character->can_set_title && message.substr(0, 7) == "#title ")
  	{
@@ -175,8 +211,13 @@ void Talk_Report(Character *character, PacketReader &reader)
 	}
 	else
 	{
+		bool shadow_log = (character->muted_until == SHADOW_MUTE_LENGTH);
+
 		if (character->world->config["LogChatPublic"])
-			Console::Err("CHAT %s", ("PUBLIC " + util::to_string(character->mapid) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+			Console::Err("%s %s", shadow_log ? "SHADOW_CHAT" : "CHAT", ("PUBLIC " + util::to_string(character->mapid) + " " + util::ucfirst(character->SourceName()) + ": " + message).c_str());
+
+		if (character->muted_until > time(0))
+			return;
 
 		character->map->Msg(character, message, false);
 	}
@@ -186,7 +227,7 @@ void Talk_Report(Character *character, PacketReader &reader)
 void Talk_Admin(Character *character, PacketReader &reader)
 {
 	if (character->SourceAccess() < ADMIN_GUARDIAN) return;
-	if (character->muted_until > time(0)) return;
+	//if (character->muted_until > time(0)) return;
 
 	std::string message = reader.GetEndString(); // message
 	limit_message(message, static_cast<int>(character->world->config["ChatLength"]));

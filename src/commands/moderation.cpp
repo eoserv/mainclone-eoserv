@@ -9,7 +9,10 @@
 #include "../character.hpp"
 #include "../command_source.hpp"
 #include "../config.hpp"
+#include "../console.hpp"
+#include "../database.hpp"
 #include "../i18n.hpp"
+#include "../player.hpp"
 #include "../world.hpp"
 
 #include "../util.hpp"
@@ -98,6 +101,56 @@ void Mute(const std::vector<std::string>& arguments, Command_Source* from, bool 
 	do_punishment(from, victim, std::mem_fn(&World::Mute), announce);
 }
 
+void Shadow(const std::vector<std::string>& arguments, Command_Source* from, bool announce = true)
+{
+	Character* victim = from->SourceWorld()->GetCharacter(arguments[0]);
+
+	if (!victim || victim->nowhere)
+	{
+		from->ServerMsg(from->SourceWorld()->i18n.Format("character_not_found"));
+		return;
+	}
+
+	if (victim->SourceAccess() >= from->SourceAccess())
+	{
+		from->ServerMsg(from->SourceWorld()->i18n.Format("command_access_denied"));
+		return;
+	}
+
+	auto&& db = from->SourceWorld()->db;
+	std::string query;
+
+	if (victim->muted_until == 0x7FFFFFFF)
+	{
+		from->ServerMsg(victim->SourceName() + " has been un-shadow-muted!");
+		victim->muted_until = 0;
+
+		std::string query = "UPDATE accounts SET banned=0 WHERE name="
+						  + db.Escape(victim->player->username);
+	}
+	else
+	{
+		from->ServerMsg(victim->SourceName() + " has been shadow-muted!");
+		victim->muted_until = 0x7FFFFFFF;
+
+		std::string query = "UPDATE accounts SET banned=666 WHERE name="
+						  + db.Escape(victim->player->username);
+	}
+
+	if (!query.empty())
+	{
+		try
+		{
+			db.Query(query.c_str());
+		}
+		catch (Database_Exception& e)
+		{
+			Console::Err("Could not save ban to database.");
+			Console::Err("%s", e.error());
+		}
+	}
+}
+
 COMMAND_HANDLER_REGISTER(moderation)
 	using namespace std::placeholders;
 	Register({"kick", {"victim"}, {}}, std::bind(Kick, _1, _2, true));
@@ -109,6 +162,8 @@ COMMAND_HANDLER_REGISTER(moderation)
 	Register({"unjail", {"victim"}, {}}, Unjail);
 	Register({"mute", {"victim"}, {}}, std::bind(Mute, _1, _2, true));
 	Register({"smute", {"victim"}, {}, 2}, std::bind(Mute, _1, _2, false));
+
+	Register({"shadow", {"victim"}, {}}, std::bind(Shadow, _1, _2, true));
 
 	RegisterAlias("k", "kick");
 	RegisterAlias("b", "ban");

@@ -287,6 +287,13 @@ void eoserv_config_validate_config(Config& config)
 	eoserv_config_default(config, "CheckNormalizePasswords", false);
 	eoserv_config_default(config, "Halloween2016", false);
 	eoserv_config_default(config, "Halloween2016Noisy", false);
+
+	eoserv_config_default(config, "SpamRepeatUsageThreshold", 360);
+	eoserv_config_default(config, "SpamRepeatBase", 2);
+	eoserv_config_default(config, "SpamRepeatCap", 10);
+	eoserv_config_default(config, "SpamLogDuration", 1800.0);
+	eoserv_config_default(config, "SpamLogSize", 40);
+
 }
 
 void eoserv_config_validate_admin(Config& config)

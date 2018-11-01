@@ -129,7 +129,7 @@ void Login_Request(EOClient *client, PacketReader &reader)
 		return;
 	}
 
-	if (client->player->banned)
+	if (client->player->banned > 0 && client->player->banned != 666)
 	{
 		PacketBuilder reply(PACKET_F_INIT, PACKET_A_INIT, 2);
 		reply.AddByte(INIT_BANNED);

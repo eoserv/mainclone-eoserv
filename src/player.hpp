@@ -30,7 +30,7 @@ class Player
 		unsigned int id;
 		std::string username;
 		util::secure_string password;
-		bool banned;
+		int banned;
 
 		std::string dutylast;
 
