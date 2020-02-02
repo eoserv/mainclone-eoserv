@@ -309,6 +309,13 @@ int eoserv_main(int argc, char *argv[])
 					Console::Wrn("Failed to change stdout buffer settings");
 				}
 			}
+			else
+			{
+				if (std::setvbuf(stdout, 0, _IOLBF, 0) != 0)
+				{
+					Console::Wrn("Failed to change stdout buffer settings");
+				}
+			}
 		}
 
 		std::array<std::string, 6> dbinfo;

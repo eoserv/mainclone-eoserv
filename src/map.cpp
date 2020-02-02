@@ -18,6 +18,7 @@
 #include "player.hpp"
 #include "quest.hpp"
 #include "timer.hpp"
+#include "wedding.hpp"
 #include "world.hpp"
 
 #include "console.hpp"
@@ -352,6 +353,15 @@ Map::Map(int id, World *world)
 	{
 		TimeEvent *event = new TimeEvent(map_spawn_chests, this, 60.0, Timer::FOREVER);
 		this->world->timer.Register(event);
+	}
+
+	for (NPC* npc : this->npcs)
+	{
+		if (npc->ENF().type == ENF::Priest)
+		{
+			this->wedding = new Wedding(this, npc->index);
+			break;
+		}
 	}
 }
 

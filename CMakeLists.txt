@@ -2,7 +2,7 @@
 # EOSERV is released under the zlib license.
 # See LICENSE.txt for more info.
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.0)
 project(eoserv C CXX)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
@@ -15,8 +15,7 @@ option(EOSERV_WANT_MYSQL "Enables MariaDB/MySQL server database support." ON)
 option(EOSERV_WANT_SQLITE "Enables SQLite3 embedded database support." ON)
 
 option(EOSERV_USE_PRECOMPILED_HEADERS "Uses a precompiled header to speed up compilation." ON)
-option(EOSERV_USE_UNITY_BUILD "Compiles multiple source files in one translation unit to speed up compilation." ON)
-option(EOSERV_USE_CLANG_MODULES "Uses Clang modules (if available) to speed up compilation. Note: Clang modules are an experimental feature." OFF)
+option(EOSERV_USE_UNITY_BUILD "Compiles multiple source files in one translation unit to speed up compilation." OFF)
 
 option(EOSERV_GEN_PRECOMPILED_HEADERS "Generated precompiled header automatically. Requires a shell with basic binutils including grep and awk." OFF)
 option(EOSERV_NO_DATA "Disables copying of data files in to build directory" OFF)
@@ -52,82 +51,9 @@ set(eoserv_LIBRARIES)
 #  Compiler flags
 # ----------------
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	set(eoserv_GCC TRUE)
-	set(eoserv_COMPILER_SUPPORTED TRUE)
-
-	#if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5")
-	#	set(eoserv_COMPILER_SUPPORTED FALSE)
-	#endif()
-
-	# EOSERV will try to support GCC 4.8 and 4.9 until GCC 5 becomes standard in MinGW distributions
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.8")
-		set(eoserv_COMPILER_SUPPORTED FALSE)
-	endif()
-endif()
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-	set(eoserv_CLANG TRUE)
-	set(eoserv_COMPILER_SUPPORTED TRUE)
-
-	if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "3.4")
-		set(eoserv_COMPILER_SUPPORTED FALSE)
-	endif()
-endif()
-
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-	set(eoserv_MSVC TRUE)
-	set(eoserv_COMPILER_SUPPORTED TRUE)
-
-	if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14.0")
-		set(eoserv_COMPILER_SUPPORTED FALSE)
-	else()
-		message(WARNING "Visual C++ is untested and may not work at all. Please report your reuslts at http://eoserv.net/forum/")
-	endif()
-endif()
-
-if((eoserv_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0")
-OR (eoserv_CLANG AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "3.5"))
-	set(eoserv_CXX1Y TRUE)
-endif()
-
-if(eoserv_GCC OR eoserv_CLANG)
-	if(NOT " ${CMAKE_CXX_FLAGS} " MATCHES " -std=")	
-		if(eoserv_CXX1Y)
-			set(eoserv_STDFLAG "-std=c++1y")
-		else()
-			set(eoserv_STDFLAG "-std=c++14")
-		endif()
-	endif()
-endif()
-
-if(eoserv_STDFLAG)
-	if(NOT " ${CMAKE_CXX_FLAGS} " MATCHES " -std=")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${eoserv_STDFLAG}")
-	endif()
-endif()
-
 # These non-standard anti-optimizations are currently required for a correctly functioning server
 if(eoserv_GCC OR eoserv_CLANG)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fwrapv -fno-strict-aliasing")
-endif()
-
-if(NOT eoserv_COMPILER_SUPPORTED)
-	message(WARNING "You are using an unsupported compiler, the build may fail or result in an unstable/exploitable server. Detected compiler was ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}. EOSERV is only tested on GCC 5+ and Clang 3.4+. Visual C++ 2015/14.0+ may work but is untested.")
-endif()
-
-if(EOSERV_USE_CLANG_MODULES)
-	if(NOT eoserv_CLANG)
-		message(WARNING "Not using Clang, modules unavailable. Detected compiler was ${CMAKE_CXX_COMPILER_ID}.")
-	else()
-		# TODO: Could use a check to see if libc++ is the default standard library
-		if (NOT " ${CMAKE_CXX_FLAGS} " MATCHES " -stdlib=libc\\+\\+ ")
-			message(WARNING "Using libc++ is highly reccommended when using Clang modules. Add -stdlib=libc++ to CMAKE_CXX_FLAGS.")
-		endif()
-
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fmodules")
-		add_definitions(-DCLANG_MODULES_WORKAROUND)
-	endif()
 endif()
 
 if(EOSERV_DEBUG_QUERIES)
@@ -147,6 +73,8 @@ endif()
 add_executable(eoserv
 	${eoserv_SOURCE_FILES}
 )
+
+set_target_properties(eoserv PROPERTIES CXX_STANDARD 14)
 
 # -----------
 #  Libraries

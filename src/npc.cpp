@@ -1152,7 +1152,7 @@ void NPC::Attack(Character *target, bool ranged)
 
 void NPC::Say(const std::string& message)
 {
-	PacketBuilder builder(PACKET_NPC, PACKET_PLAYER, 18);
+	PacketBuilder builder(PACKET_NPC, PACKET_PLAYER, 5 + message.length());
 	builder.AddByte(255);
 	builder.AddByte(255);
 	builder.AddChar(this->index);
